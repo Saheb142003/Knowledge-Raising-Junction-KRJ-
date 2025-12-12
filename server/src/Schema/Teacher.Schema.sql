@@ -1,5 +1,3 @@
-
-
 CREATE TABLE teacher (
     teacher_id SERIAL PRIMARY KEY,
 
