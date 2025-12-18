@@ -1,13 +1,20 @@
 import React from 'react'
+import {Routes,Route} from 'react-router-dom';
+import Gateway from './Landing/Pages/Gateway';
+import Header from './Landing/Components/Header';
+import Footer from './Landing/Components/Footer';
+
 
 const App = () => {
   return (
-    <div className='bg-[coral] text-white h-[100vh] w-full p-10'>
-      <h1 className='text-7xl text-center'>
-        Knowledge Raising Junction (KRJ)
-      </h1>
+    <div>
+      <Header/>
+      <Routes>
+        <Route path='/' element={<Gateway/>}/>
 
-      
+      </Routes>
+      <Footer/>
+
     </div>
   )
 }
