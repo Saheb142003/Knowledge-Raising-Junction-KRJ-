@@ -34,10 +34,7 @@ const StudentSchema = new mongoose.Schema(
       ref: "Branch",
     },
 
-    shift: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Shift",
-    },
+    
 
     assignedTeacher: {
       type: mongoose.Schema.Types.ObjectId,
@@ -74,10 +71,10 @@ const StudentSchema = new mongoose.Schema(
       },
     ],
 
-    // idCard: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "IDCard",
-    // },
+    idCard: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "IDCard",
+    },
 
     onlineCourses: [
       {
