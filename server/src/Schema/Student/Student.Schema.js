@@ -12,7 +12,11 @@ const StudentSchema = new mongoose.Schema(
     // ---------- BASIC INFO ----------
     fatherName: String,
     motherName: String,
-    bloodGroup: String,
+    bloodGroup: {
+      type: String,
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+      required: true,
+    },
     gender: { type: String, enum: ["Male", "Female", "Other"] },
     dob: Date,
     address: String,
@@ -33,8 +37,6 @@ const StudentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
     },
-
-    
 
     assignedTeacher: {
       type: mongoose.Schema.Types.ObjectId,
