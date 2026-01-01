@@ -25,6 +25,10 @@ const StudentSchema = new mongoose.Schema(
       whatsapp: String,
       parentMobile: String,
     },
+    password:{
+      type:String,
+      required:true
+    },
 
     // ---------- ACADEMIC ----------
     academicProfile: {
