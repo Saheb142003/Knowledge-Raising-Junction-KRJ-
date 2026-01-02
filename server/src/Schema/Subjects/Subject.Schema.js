@@ -20,18 +20,24 @@ const subjectSchema = new mongoose.Schema(
       enum: ["THEORY", "LAB", "SEMINAR", "OPTIONAL"],
       default: "THEORY",
     },
-    branch: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Branch",
-      required: true,
-      index: true,
-    },
-    batch: {
+    // branch: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Branch",
+    //   required: true,
+    //   index: true,
+    // },
+    batches: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
       required: true,
       index: true,
-    },
+    }],
+    routines: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Routine",
+      required: true,
+      index: true,
+    }],
     teachers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -43,6 +49,20 @@ const subjectSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Student",
+        default: [],
+      },
+    ],
+    tests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Test",
+        default: [],
+      },
+    ],
+    assignments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Assignment",
         default: [],
       },
     ],

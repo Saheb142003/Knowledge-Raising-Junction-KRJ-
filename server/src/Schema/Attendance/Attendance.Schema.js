@@ -62,7 +62,7 @@ const attendanceSchema = new mongoose.Schema(
     // Optional metadata
     markedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // teacher/admin who marked attendance
+      // ref: "Teacher", // teacher/admin who marked attendance
       required: true,
     },
 

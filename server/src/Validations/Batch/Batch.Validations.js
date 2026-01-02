@@ -4,7 +4,7 @@ export const objectId = Joi.string().hex().length(24).messages({
   "string.base": "ID must be a string",
   "string.hex": "ID must be a valid hexadecimal value",
   "string.length": "ID must be a valid 24-character ObjectId",
-});
+}); 
 
 export const dateField = Joi.date().messages({
   "date.base": "Value must be a valid date",
@@ -29,11 +29,18 @@ export const name = Joi.string().trim().min(2).max(100).required().messages({
   "string.max": "Batch name must not exceed 100 characters",
 });
 
-export const code = Joi.string().trim().min(2).max(30).required().messages({
-  "string.empty": "Batch code is required",
-  "string.min": "Batch code must be at least 2 characters long",
-  "string.max": "Batch code must not exceed 30 characters",
-});
+export const code = Joi.string()
+  .trim()
+  .pattern(/^KRJ-\d{4}-[A-Z0-9]+-[A-Z0-9_]+$/)
+  .messages({
+    "string.base": "Batch code must be a string",
+    "string.empty": "Batch code is required",
+    "string.pattern.base":
+      "Batch code must be in format KRJ-YYYY-BRANCH-BATCHNAME (e.g. KRJ-2025-CS-A1)",
+    "string.min": "Batch code must be at least 2 characters long",
+    "string.max": "Batch code must not exceed 30 characters",
+  });
+
 
 export const startDate = dateField.required().messages({
   "any.required": "Batch start date is required",
@@ -43,9 +50,11 @@ export const endDate = dateField.messages({
   "date.base": "Batch end date must be a valid date",
 });
 
-export const mentor = objectId.allow(null).messages({
-  "any.only": "Invalid mentor reference",
-});
+export const mentors =Joi.array().items(objectId).messages({
+  "array.base": "Mentors must be an array of teacher IDs",
+}); 
+
+
 
 /* Capacities */
 export const studentCapacity = positiveNumber.messages({

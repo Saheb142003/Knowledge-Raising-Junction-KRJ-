@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const OnlineCoursePurchaseSchema = new mongoose.Schema({
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
+  studentId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
   teacher:[{
     type: mongoose.Schema.Types.ObjectId,
           ref: "Teacher",

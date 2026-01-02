@@ -78,7 +78,7 @@ const employeeSchema = new mongoose.Schema(
       enum: ["ACTIVE", "ON_LEAVE", "RESIGNED", "TERMINATED"],
       default: "ACTIVE",
     },
-
+ 
     previousEmployment: [
       {
         organization: String,

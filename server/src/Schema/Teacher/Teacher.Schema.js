@@ -77,12 +77,30 @@ const teacherSchema = new mongoose.Schema(
         ref: "Routine",
       },
     ],
+    tests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Test",
+      },
+    ],
+    assignments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Assignment",
+      },
+    ],
 
     // Instead of 'teacher_students' table
     students: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Student",
+      },
+    ],
+    subjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
       },
     ],
     
