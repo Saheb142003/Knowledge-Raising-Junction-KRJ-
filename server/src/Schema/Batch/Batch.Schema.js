@@ -1,14 +1,14 @@
 import mongoose from "mongoose";
-
+ 
 
 const batchSchema = new mongoose.Schema(
   {
-    branch: {
+    branches: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
       required: true,
       index: true,
-    },
+    }],
 
     name: {
       type: String,
@@ -16,7 +16,7 @@ const batchSchema = new mongoose.Schema(
       trim: true,
     },
 
-    code: {
+    code: {       //KRJ-Year-branch-name_of_batch
       type: String,
       required: true,
       trim: true,
@@ -31,11 +31,11 @@ const batchSchema = new mongoose.Schema(
       type: Date,
     },
 
-    mentor: {
+    mentors: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",
       default: null,
-    },
+    }],
 
     // Capacities
     studentCapacity: { type: Number, default: 60 },
@@ -54,21 +54,25 @@ const batchSchema = new mongoose.Schema(
     // 1. Subjects Array
     subjects: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "BatchSubject", // FIXED: Must match the Model name exported below
+      ref: "Subject", // FIXED: Must match the Model name exported below
       default: null,
     }],
 
     // 2. Routine Array
     // CHANGED: Made this an Array []. A batch cannot have just ONE routine slot.
-    routine: [{
+    routine: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "RoutineSlot", // FIXED
-    }],
+      ref: "Routine", // FIXED
+    },
 
     // 3. Assignments (Junction Table Links)
     assignments: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "SlotBatchAssignment" // FIXED
+      ref: "Assignment" // FIXED
+    }],
+    tests: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tes" // FIXED
     }]
   },
   { timestamps: true }
@@ -187,4 +191,4 @@ slotBatchAssignmentSchema.index({ routineSlot: 1, batch: 1 }, { unique: true });
 export const Batch = mongoose.model("Batch", batchSchema);
 export const BatchSubject = mongoose.model("BatchSubject", batchSubjectSchema);
 export const RoutineSlot = mongoose.model("RoutineSlot", routineSlotSchema);
-export const SlotBatchAssignment = mongoose.model("SlotBatchAssignment", slotBatchAssignmentSchema);
+export const SlotBatchAssignment = mongoose.model("SlotBatchAssignment", slotBatchAssignmentSchema); 

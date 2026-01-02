@@ -34,7 +34,7 @@ const StudentSchema = new mongoose.Schema(
     academicProfile: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicProfile",
-    },
+    }, 
 
     // ---------- ORGANIZATION ----------
     branch: {

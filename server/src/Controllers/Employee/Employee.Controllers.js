@@ -184,4 +184,6 @@ const createEmployerProfile = asyncHandler(async (req, res) => {
     }
 });
 
+
+
 export { createEmployerProfile };

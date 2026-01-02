@@ -48,9 +48,10 @@ export const branch = objectId.required().messages({
   "any.required": "Branch ID is required",
 });
 
-export const batch = objectId.required().messages({
-  "any.required": "Batch ID is required",
+export const batches = Joi.array().items(objectId).messages({
+  "array.base": "Batches must be an array of batch IDs",
 });
+
 
 export const teachers = Joi.array().items(objectId).messages({
   "array.base": "Teachers must be an array of teacher IDs",
