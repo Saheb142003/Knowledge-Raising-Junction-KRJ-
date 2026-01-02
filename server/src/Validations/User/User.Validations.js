@@ -49,7 +49,7 @@ export const password = Joi.string().min(8).messages({
 export const role = Joi.string().valid("STUDENT", "TEACHER", "ADMIN").messages({
   "string.base": "Role must be a string",
   "any.only": "Role must be STUDENT, TEACHER, or ADMIN",
-});
+}); 
 
 export const permissions = Joi.array().items(Joi.string()).messages({
   "array.base": "Permissions must be an array of strings",

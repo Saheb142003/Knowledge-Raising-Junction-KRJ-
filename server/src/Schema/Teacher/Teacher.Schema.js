@@ -8,7 +8,7 @@ const teacherSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true, // A user should only have one teacher profile
-    },
+    }, 
 
     // 2. Teacher is an Employee (HR/Payroll)
     employeeId: {

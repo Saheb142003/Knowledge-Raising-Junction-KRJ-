@@ -19,7 +19,7 @@ const idCardSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-
+ 
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
