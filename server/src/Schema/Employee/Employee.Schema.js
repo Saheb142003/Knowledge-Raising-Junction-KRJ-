@@ -31,7 +31,7 @@ const employeeSchema = new mongoose.Schema(
     department: {
       type: String, // Academic, Admin, Finance, Operations
       required: true,
-    },
+    }, 
 
     // 3. BRANCH ASSOCIATION
     branches: [
