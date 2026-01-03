@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 const assignmentSchema = new mongoose.Schema(
   {
     
-    batch: {
+    batches: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
       required: true,
       index: true, // For fast lookup: "Show me assignments for Batch A"
-    },
+    }],
     subject: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Subject",
@@ -53,6 +53,13 @@ const assignmentSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    submissions:[
+      {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Submission",
+      required: true,
+    }
+    ]
   },
   { timestamps: true }
 );

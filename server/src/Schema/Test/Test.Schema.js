@@ -1,9 +1,26 @@
+import { optional, required } from "joi";
+
 const TestSchema = new mongoose.Schema(
   {
-    studentId: {
+    students: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
+    }],
+    subjectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subject",
+    
     },
+    teacherId: { 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Teacher",
+    
+    },
+    batches: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+    
+    }],
 
     testName: String,
     subject: String,

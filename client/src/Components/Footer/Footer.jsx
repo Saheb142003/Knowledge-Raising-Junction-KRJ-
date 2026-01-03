@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   Layers
 } from 'lucide-react';
+import Logo from '../Logo/Logo';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -46,14 +47,7 @@ const Footer = () => {
           
           {/* Col 1: Brand Info */}
           <div className="space-y-6">
-            <div className="flex items-center gap-2">
-               <div className="w-8 h-8 rounded bg-orange-500 flex items-center justify-center text-white">
-                  <span className="font-bold text-sm tracking-tighter">KRJ</span>
-               </div>
-               <span className="text-xl font-bold tracking-tight">
-                 KRJ <span className="text-orange-500">Institute</span>
-               </span>
-            </div>
+            <Logo foot={true} />
             <p className="text-gray-400 text-sm leading-relaxed">
               Knowledge Raising Junction (KRJ) is dedicated to building strong academic foundations through disciplined teaching and modern technology.
             </p>

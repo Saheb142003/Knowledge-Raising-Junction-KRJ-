@@ -1,69 +1,83 @@
 import { User } from "../../Schema/User/User.Schema.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { generateTokens } from "../../Utility/JWT/JWTTokens.Utility.js";
+import { comparePassword } from "../../Utility/Password/Password.Utility.js";
+import successResponse from "../../Utility/Response/SuccessResponse.Utility.js";
+import ApiError from "../../Utility/Response/ErrorResponse.Utility.js";
+import { asyncHandler } from "../../Utility/Response/AsyncHandler.Utility.js";
+import { email, password } from "../../Validations/User/User.Validations.js";
+import Joi from "joi";
+import mongoose from "mongoose";
 
-const generateAccessToken = (user) => {
-  return jwt.sign(
-    {
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-    }
-  );
-};
+const loginSchema = Joi.object({
+  email: email.required(),
+  password: password.required(),
+});
 
-export const loginUser = async (req, res) => {
+const loginUser = asyncHandler(async (req, res) => {
+  let session;
   try {
-    const { email, password } = req.body;
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+    const { error, value } = loginSchema.validate(req.body);
+    if (error) {
+      throw new ApiError(400, error.details[0].message);
     }
 
-    const user = await User.findOne({ email }).select("+passwordHash");
-
+    const { email, password } = value;
+    const user = await User.findOne({ email })
+      .select("+passwordHash")
+      .session(session);
     if (!user) {
-      return res.status(404).json({ message: "User does not exist" });
+      throw new ApiError(404, "User does not exist");
     }
-
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid user credentials" });
+      throw new ApiError(401, "Invalid user credentials");
     }
 
-    const accessToken = generateAccessToken(user);
+    // 4. Generate Tokens
+    const { accessToken, refreshToken } = generateTokens(user);
 
-    const loggedInUser = await User.findById(user._id).select(
-      "-passwordHash -twoFactorSecret"
-    );
+    // 5. Update Last Login
+    user.lastLogin = new Date();
+    await user.save({ session });
 
+    await session.commitTransaction();
+
+    // 6. Set Cookies
     const options = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     };
 
-    return res.status(200).cookie("accessToken", accessToken, options).json({
+    const loggedInUser = await User.findById(user._id).select(
+      "-passwordHash -twoFactorSecret"
+    );
+
+    return successResponse(res, {
+      statusCode: 200,
       message: "User logged in successfully",
-      user: loggedInUser,
-      accessToken,
+      data: {
+        user: loggedInUser,
+        accessToken,
+        refreshToken,
+      },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res
-      .status(500)
-      .json({ message: "Something went wrong while logging in" });
+    if (session) {
+      await session.abortTransaction();
+    }
+    throw error;
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
-};
+});
 
-export const logoutUser = async (req, res) => {
+const logoutUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -73,12 +87,19 @@ export const logoutUser = async (req, res) => {
   return res
     .status(200)
     .clearCookie("accessToken", options)
-    .json({ message: "User logged out successfully" });
-};
+    .clearCookie("refreshToken", options)
+    .json({
+      success: true,
+      message: "User logged out successfully",
+    });
+});
 
-export const getCurrentUser = async (req, res) => {
-  return res.status(200).json({
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return successResponse(res, {
+    statusCode: 200,
     message: "User fetched successfully",
-    user: req.user,
+    data: { user: req.user },
   });
-};
+});
+
+export { loginUser, logoutUser, getCurrentUser };

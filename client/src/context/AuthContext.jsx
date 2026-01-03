@@ -9,8 +9,6 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Configure axios defaults
   axios.defaults.withCredentials = true;
   const API_URL =
     import.meta.env.VITE_API_URL || "http://localhost:9000/api/v1";

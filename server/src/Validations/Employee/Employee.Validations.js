@@ -33,12 +33,18 @@ export const idCard = objectId.required().messages({
 
 /* ------------------ BASIC EMPLOYEE INFO ------------------ */
 
-export const employeeCode = Joi.string().trim().min(3).max(30).messages({
-  "string.base": "Employee code must be a string",
-  "string.empty": "Employee code is required",
-  "string.min": "Employee code must be at least 3 characters long",
-  "string.max": "Employee code must not exceed 30 characters",
-});
+export const employeeCode = Joi.string()
+  .trim()
+  .pattern(/^KRJ-EMP-\d{4}-\d{3}$/)
+  .messages({
+    "string.base": "Employee code must be a string",
+    "string.empty": "Employee code is required",
+    "string.pattern.base":
+      "Employee code must be in format KRJ-EMP-YYYY-XXX (e.g. KRJ-EMP-2025-001)",
+    "string.min": "Employee code must be at least 3 characters long",
+    "string.max": "Employee code must not exceed 30 characters",
+  });
+
 
 export const designation = Joi.string().trim().min(2).max(50).messages({
   "string.base": "Designation must be a string",
@@ -187,7 +193,7 @@ export const experienceYears = positiveNumber.messages({
 export const remarks = Joi.string().max(500).allow("").messages({
   "string.base": "Remarks must be a string",
   "string.max": "Remarks must not exceed 500 characters",
-});
+}); 
 
 export const availableToday = booleanField;
 

@@ -8,7 +8,7 @@ const teacherSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true, // A user should only have one teacher profile
-    },
+    }, 
 
     // 2. Teacher is an Employee (HR/Payroll)
     employeeId: {
@@ -77,12 +77,30 @@ const teacherSchema = new mongoose.Schema(
         ref: "Routine",
       },
     ],
+    tests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Test",
+      },
+    ],
+    assignments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Assignment",
+      },
+    ],
 
     // Instead of 'teacher_students' table
     students: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Student",
+      },
+    ],
+    subjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
       },
     ],
     

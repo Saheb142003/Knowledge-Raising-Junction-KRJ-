@@ -1,16 +1,14 @@
 import express from "express";
-import dotenv from "dotenv";
+import dotenv, { configDotenv } from "dotenv";
 import cors from "cors";
-import cookieParser from "cookie-parser";
-import connectDB from "./src/Utility/db/index.js";
-import userRouter from "./src/Routes/user.routes.js";
+import connectDB from "./src/Configs/Database/connectDB.Config.js";
 
-dotenv.config();
+configDotenv();
+
+connectDB();
 
 const app = express();
 const port = process.env.PORT || 9000;
-
-console.log("saheb");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
