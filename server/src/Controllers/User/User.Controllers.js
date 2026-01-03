@@ -19,19 +19,29 @@ const loginUser = asyncHandler(async (req, res) => {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    const { error, value } = loginSchema.validate(req.body);
+    const { error, value } = loginSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
     if (error) {
-      throw new ApiError(400, error.details[0].message);
+      throw new ApiError(
+        400,
+        "Invalid input",
+        error.details.map((d) => ({
+          field: d.path.join("."),
+          message: d.message,
+        }))
+      );
     }
 
     const { email, password } = value;
     const user = await User.findOne({ email })
-      .select("+passwordHash")
+      .select("+password")
       .session(session);
     if (!user) {
       throw new ApiError(404, "User does not exist");
     }
-    const isPasswordValid = await comparePassword(password, user.passwordHash);
+    const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
       throw new ApiError(401, "Invalid user credentials");
     }
@@ -53,7 +63,7 @@ const loginUser = asyncHandler(async (req, res) => {
     };
 
     const loggedInUser = await User.findById(user._id).select(
-      "-passwordHash -twoFactorSecret"
+      "-password -twoFactorSecret"
     );
 
     return successResponse(res, {
