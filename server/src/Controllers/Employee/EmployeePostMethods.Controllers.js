@@ -18,6 +18,7 @@ import successResponse from "../../Utility/Response/SuccessResponse.Utility.js";
 import { Branch } from "../../Schema/Branch/Branch.Schema.js";
 import { Batch } from "../../Schema/Batch/Batch.Schema.js";
 import { RoutineSlot } from "../../Schema/Routine/Routine.Schema.js";
+import { Admin } from "../../Schema/Admin/Admin.Schema.js";
 
 
 
@@ -88,6 +89,23 @@ const employeeBranchValidationSchema = Joi.object({
             salaryType, salaryAmount, bankDetails, documents, experienceYears,
             batches, routines
         } = value;
+
+        const admin = await Admin.findById(createdBy);
+
+if (!admin) {
+  throw new ApiError(403, "Invalid admin");
+}
+
+if (
+  !admin.permissions ||
+  !admin.permissions.includes("manage_employees")
+) {
+  throw new ApiError(
+    403,
+    "Admin does not have permission to manage employees"
+  );
+}
+
 
         // 3. Check for Existing User (Pass session for read consistency)
         const existingUser = await User.findOne({
@@ -161,7 +179,7 @@ const employeeBranchValidationSchema = Joi.object({
             throw new ApiError(500, "Employee Profile Creation failed");
         }
          const employeeId = createdEmployee._id;
-
+ 
   
             await Branch.updateMany(
                 { _id: { $in: branches } },
