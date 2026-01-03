@@ -11,7 +11,7 @@ import CounterSchema from "../../Schema/Counter/Counter.Schema";
 
 const branchCreationValidationSchema = Joi.object({
     name:name.required(),
-    address:address.required(),
+    address:address.required(), 
     batches:batches.optional(),
     students:students.optional(),
     employees:employees.optional(),
@@ -65,14 +65,27 @@ const createBranch = asyncHandler(async (req, res) => {
       startYear,
     } = value;
 
-    const admin = await Admin.findById(managedBy);
-    if (!admin) {
-      throw new ApiError(403, "Only admin can create branch");
-    }
+    const admins = await Admin.find({
+  _id: { $in: managedBy },
+});
 
-    if (!admin.permissions || !admin.permissions.includes("manage_branches")) {
-      throw new ApiError(403, "Insufficient permissions to create branch");
-    }
+if (!admins.length || admins.length !== managedBy.length) {
+  throw new ApiError(403, "One or more managing admins are invalid");
+}
+
+const hasPermission = admins.some(
+  (admin) =>
+    admin.permissions &&
+    admin.permissions.includes("manage_branches")
+);
+
+if (!hasPermission) {
+  throw new ApiError(
+    403,
+    "At least one admin with manage_branches permission is required"
+  );
+}
+
 
     session = await mongoose.startSession();
     session.startTransaction();
