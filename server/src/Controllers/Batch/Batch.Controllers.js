@@ -152,6 +152,21 @@ const end = endDate
           );
         }
 
+        const adminBranchIds = (admin.branches || []).map(id => id.toString());
+const batchBranchIds = branches.map(id => id.toString());
+
+const isAdminOfBranch = batchBranchIds.some(branchId =>
+  adminBranchIds.includes(branchId)
+);
+
+if (!isAdminOfBranch) {
+  throw new ApiError(
+    403,
+    "Admin is not authorized to manage batches for this branch"
+  );
+}
+
+
 
 
         const currentStudentCount = 0;
@@ -384,12 +399,16 @@ const addStudentToBatch = asyncHandler(async (req, res) => {
 
 
     const { students, batchId, adminId } = value;
+    const batch = await Batch.findById(batchId).session(session);
+    if (!batch) {
+      throw new ApiError(404, "Batch not found");
+    }
 
 const admin = await Admin.findById(adminId).session(session);
 if (!admin) {
   throw new ApiError(403, "Invalid admin");
 }
-
+ 
 if (
   !admin.permissions ||
   !admin.permissions.includes("manage_batches")
@@ -398,7 +417,7 @@ if (
     403,
     "Admin does not have permission to manage batches"
   );
-}
+} 
 
 
 const isBatchManager = batch.managedBy
@@ -413,10 +432,7 @@ if (!isBatchManager) {
 }
 
 
-    const batch = await Batch.findById(batchId).session(session);
-    if (!batch) {
-      throw new ApiError(404, "Batch not found");
-    }
+    
 
     const existingStudentIds = new Set(
       batch.students.map(id => id.toString())
