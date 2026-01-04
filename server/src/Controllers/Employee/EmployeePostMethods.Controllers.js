@@ -106,6 +106,20 @@ if (
   );
 }
 
+const adminBranchIds = (admin.branches || []).map(id => id.toString());
+const batchBranchIds = branches.map(id => id.toString());
+
+const isAdminOfBranch = batchBranchIds.some(branchId =>
+  adminBranchIds.includes(branchId)
+);
+
+if (!isAdminOfBranch) {
+  throw new ApiError(
+    403,
+    "Admin is not authorized to manage batches for this branch"
+  );
+}
+
 
         // 3. Check for Existing User (Pass session for read consistency)
         const existingUser = await User.findOne({

@@ -152,6 +152,21 @@ const end = endDate
           );
         }
 
+        const adminBranchIds = (admin.branches || []).map(id => id.toString());
+const batchBranchIds = branches.map(id => id.toString());
+
+const isAdminOfBranch = batchBranchIds.some(branchId =>
+  adminBranchIds.includes(branchId)
+);
+
+if (!isAdminOfBranch) {
+  throw new ApiError(
+    403,
+    "Admin is not authorized to manage batches for this branch"
+  );
+}
+
+
 
 
         const currentStudentCount = 0;
@@ -398,7 +413,7 @@ if (
     403,
     "Admin does not have permission to manage batches"
   );
-}
+} 
 
 
 const isBatchManager = batch.managedBy
