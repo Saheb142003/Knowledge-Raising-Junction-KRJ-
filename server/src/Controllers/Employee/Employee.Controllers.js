@@ -218,6 +218,10 @@ const createEmployerProfile = asyncHandler(async (req, res) => {
         }
     }
 });
+
+
+
+
 const assignBranchToEmployee = asyncHandler(async (req, res) => {
   let session;
 
