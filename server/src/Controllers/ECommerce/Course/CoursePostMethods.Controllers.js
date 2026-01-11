@@ -373,6 +373,10 @@ const replaceInstructorOfCourse = asyncHandler(async (req, res) => {
 
 
 
+export {createCourse,publishCourse,addInstructorsToTheCourse,replaceInstructorOfCourse}
+
+
+
 
 
 
