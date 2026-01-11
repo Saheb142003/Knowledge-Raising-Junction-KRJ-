@@ -1,12 +1,13 @@
-import { Branch } from "../../Models/Branch.model.js";
-import { Teacher } from "../../Models/Teacher.model.js";
+import { Branch } from "../../Schema/Management/Branch/Branch.Schema.js";
+import Teacher from "../../Schema/Management/Teacher/Teacher.Schema.js";
+
 
 export const mapExcelRowToStudent = async (row, userId) => {
   const branch = await Branch.findOne({ code: row.branchCode });
   const teacher = await Teacher.findOne({ email: row.teacherEmail });
 
   return {
-    userId,
+    userId, 
 
     fatherName: row.fatherName,
     motherName: row.motherName,

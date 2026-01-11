@@ -9,4 +9,4 @@ export const excelToJson = (filePath) => {
   const data = xlsx.utils.sheet_to_json(sheet);
 
   return data; // array of objects
-};
+}; 
