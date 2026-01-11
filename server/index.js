@@ -2,6 +2,10 @@ import express from "express";
 import dotenv, { configDotenv } from "dotenv";
 import cors from "cors";
 import connectDB from "./src/Configs/Database/connectDB.Config.js";
+import cookieParser from "cookie-parser";
+import router from "./src/Routes/Management/students/student.routes.js";
+
+
 
 configDotenv();
 
@@ -32,7 +36,7 @@ connectDB()
   });
 
 // Routes
-app.use("/api/v1/user", userRouter);
+app.use("/api/v1/user",router);
 
 app.get("/", (req, res) => {
   res.send("Server Started Successfully, you are in the homepage...");
