@@ -147,19 +147,40 @@ export const totalResources = Joi.number()
 /* =========================
    INSTRUCTOR INFO
 ========================== */
-export const instructorName = Joi.string()
-  .trim()
+export const instructor = Joi.object({
+  name: Joi.string()
+    .trim()
+    .required()
+    .messages({
+      "string.empty": "Instructor name is required"
+    }),
+
+  bio: Joi.string()
+    .max(1000)
+    .optional()
+    .messages({
+      "string.max": "Instructor bio cannot exceed 1000 characters"
+    }),
+
+  profileImage: Joi.string()
+    .uri()
+    .optional()
+    .messages({
+      "string.uri": "Instructor profile image must be a valid URL"
+    }),
+
+  expertise: Joi.array()
+    .items(Joi.string().trim())
+    .optional()
+});
+export const instructors = Joi.array()
+  .items(instructor)
+  .min(1)
   .required()
   .messages({
-    "string.empty": "Instructor name is required"
+    "array.min": "At least one instructor is required"
   });
 
-export const instructorBio = Joi.string()
-  .max(1000)
-  .optional()
-  .messages({
-    "string.max": "Instructor bio cannot exceed 1000 characters"
-  });
 
 /* =========================
    PUBLISHING CONTROL
