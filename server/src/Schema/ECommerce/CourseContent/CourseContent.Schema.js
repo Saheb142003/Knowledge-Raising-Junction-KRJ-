@@ -82,7 +82,7 @@ const CourseContentSchema = new mongoose.Schema(
       default: "SUPER_ADMIN"
     }
   },
-  {
+  { 
     timestamps: true
   }
 );

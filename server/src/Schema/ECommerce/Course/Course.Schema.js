@@ -112,14 +112,22 @@ const CourseSchema = new mongoose.Schema(
     /* =========================
        INSTRUCTOR INFO
     ========================== */
-    instructorName: {
+    instructors: [
+  {
+    name: {
       type: String,
       required: true
     },
-
-    instructorBio: {
+    bio: {
       type: String
     },
+    profileImage: {
+      type: String
+    },
+    expertise: [String]
+  }
+],
+
 
     /* =========================
        PUBLISHING CONTROL
