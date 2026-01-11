@@ -65,8 +65,12 @@ export const updateAttendance = asyncHandler(async (req, res) => {
   }
 
   // 4️⃣ RESPONSE
+  // Sanitize and return
+  const result = updated && updated.toObject ? updated.toObject() : { ...(updated || {}) };
+  if (result.__v !== undefined) delete result.__v;
+
   return successResponse(res, {
     message: "Attendance updated successfully",
-    data: updated,
+    data: result,
   });
 });

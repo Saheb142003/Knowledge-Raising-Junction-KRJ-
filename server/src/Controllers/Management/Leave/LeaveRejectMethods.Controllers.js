@@ -46,24 +46,37 @@ export const rejectLeave = asyncHandler(async (req, res) => {
 
   const { adminId, remarks } = value;
 
-  // 1️⃣ Find leave request
-  const leave = await Leave.findById(leaveId);
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-  if (!leave) throw new ApiError(404, "Leave request not found");
-  if (leave.status !== "PENDING")
-    throw new ApiError(400, "Only pending leave can be rejected");
+    // 1️⃣ Find leave request inside transaction
+    const leave = await Leave.findById(leaveId).session(session);
+    if (!leave) throw new ApiError(404, "Leave request not found");
+    if (leave.status !== "PENDING")
+      throw new ApiError(400, "Only pending leave can be rejected");
 
-  // 2️⃣ Reject leave
-  leave.status = "REJECTED";
-  leave.approvedBy = adminId;
-  leave.approvalDate = new Date();
-  leave.remarks = remarks || "";
-  await leave.save();
+    // 2️⃣ Reject leave
+    leave.status = "REJECTED";
+    leave.approvedBy = adminId;
+    leave.approvalDate = new Date();
+    leave.remarks = remarks || "";
+    await leave.save({ session });
 
-  // 3️⃣ No attendance creation for rejected leave
+    await session.commitTransaction();
 
-  return successResponse(res, {
-    message: "Leave rejected successfully",
-    data: leave,
-  });
+    const out = leave.toObject ? leave.toObject() : { ...leave };
+    if (out.__v !== undefined) delete out.__v;
+
+    return successResponse(res, {
+      message: "Leave rejected successfully",
+      data: out,
+    });
+  } catch (err) {
+    if (session) await session.abortTransaction();
+    throw err;
+  } finally {
+    if (session) session.endSession();
+  }
 });

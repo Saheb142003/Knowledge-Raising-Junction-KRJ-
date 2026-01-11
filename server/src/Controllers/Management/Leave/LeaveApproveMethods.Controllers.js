@@ -45,67 +45,97 @@ export const approveLeave = asyncHandler(async (req, res) => {
 
   const { adminId, remarks } = value;
 
-  // 1️⃣ Find leave request
-  const leave = await Leave.findById(leaveId);
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-  if (!leave) throw new ApiError(404, "Leave request not found");
-  if (leave.status !== "PENDING")
-    throw new ApiError(400, "Only pending leave can be approved");
+    // 1️⃣ Find leave request (inside transaction)
+    const leave = await Leave.findById(leaveId).session(session);
+    if (!leave) throw new ApiError(404, "Leave request not found");
+    if (leave.status !== "PENDING")
+      throw new ApiError(400, "Only pending leave can be approved");
 
-  // 2️⃣ Approve leave
-  leave.status = "APPROVED";
-  leave.approvedBy = adminId;
-  leave.approvalDate = new Date();
-  leave.remarks = remarks || "";
-  await leave.save();
+    // 2️⃣ Approve leave
+    leave.status = "APPROVED";
+    leave.approvedBy = adminId;
+    leave.approvalDate = new Date();
+    leave.remarks = remarks || "";
+    await leave.save({ session });
 
-  // 3️⃣ Mark attendance for each day
-  const start = new Date(leave.startDate);
-  const end = new Date(leave.endDate);
+    // 3️⃣ Mark attendance for each day (upsert to avoid duplicates)
+    const start = new Date(leave.startDate);
+    const end = new Date(leave.endDate);
 
-  const dates = [];
-  const ONE_DAY = 24 * 60 * 60 * 1000;
+    const dates = [];
+    const ONE_DAY = 24 * 60 * 60 * 1000;
 
-  for (let d = start; d <= end; d = new Date(d.getTime() + ONE_DAY)) {
-    dates.push(new Date(d));
-  }
+    for (let d = start; d <= end; d = new Date(d.getTime() + ONE_DAY)) {
+      dates.push(new Date(d));
+    }
 
-  const attendanceDocs = dates.map((day) => ({
-    attendeeType: leave.applicantType,
-    attendeeId: leave.applicantId,
-    branch: leave.branch,
-    batch: null, // batch leave me required nahi hota
-    subject: null,
-    date: day,
-    status: "ON_LEAVE",
-    markedBy: adminId,
-    remarks: "Leave approved",
-  }));
+    let attendanceAdded = 0;
+    for (const day of dates) {
+      const doc = {
+        attendeeType: leave.applicantType,
+        attendeeId: leave.applicantId,
+        branch: leave.branch,
+        batch: null,
+        subject: null,
+        date: day,
+        status: "ON_LEAVE",
+        markedBy: adminId,
+        remarks: "Leave approved",
+      };
 
-  await Attendance.insertMany(attendanceDocs);
+      const res = await Attendance.updateOne(
+        { attendeeType: doc.attendeeType, attendeeId: doc.attendeeId, date: doc.date },
+        { $setOnInsert: doc },
+        { upsert: true, session }
+      );
 
-  // 4️⃣ Add leaveRef in profile
-  if (leave.applicantType === "STUDENT") {
-    await Student.findByIdAndUpdate(leave.applicantId, {
-      $addToSet: { leaveRef: leave._id },
+      if (res.upsertedCount && res.upsertedCount > 0) attendanceAdded += 1;
+    }
+
+    // 4️⃣ Add leaveRef in profile (inside transaction)
+    if (leave.applicantType === "STUDENT") {
+      await Student.findByIdAndUpdate(
+        leave.applicantId,
+        { $addToSet: { leaveRef: leave._id } },
+        { session }
+      );
+    }
+
+    if (leave.applicantType === "TEACHER") {
+      await Teacher.findByIdAndUpdate(
+        leave.applicantId,
+        { $addToSet: { leaveRef: leave._id } },
+        { session }
+      );
+    }
+
+    if (leave.applicantType === "EMPLOYEE") {
+      await Employee.findByIdAndUpdate(
+        leave.applicantId,
+        { $addToSet: { leaveRef: leave._id } },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+
+    const out = leave.toObject ? leave.toObject() : { ...leave };
+    if (out.__v !== undefined) delete out.__v;
+
+    return successResponse(res, {
+      message: "Leave approved successfully",
+      leave: out,
+      attendanceAddedForDays: attendanceAdded,
     });
+  } catch (err) {
+    if (session) await session.abortTransaction();
+    throw err;
+  } finally {
+    if (session) session.endSession();
   }
-
-  if (leave.applicantType === "TEACHER") {
-    await Teacher.findByIdAndUpdate(leave.applicantId, {
-      $addToSet: { leaveRef: leave._id },
-    });
-  }
-
-  if (leave.applicantType === "EMPLOYEE") {
-    await Employee.findByIdAndUpdate(leave.applicantId, {
-      $addToSet: { leaveRef: leave._id },
-    });
-  }
-
-  return successResponse(res, {
-    message: "Leave approved successfully",
-    leave,
-    attendanceAddedForDays: dates.length,
-  });
 });

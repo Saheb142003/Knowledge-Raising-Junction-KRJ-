@@ -3,7 +3,7 @@ import { asyncHandler } from "../../../Utility/Response/AsyncHandler.Utility.js"
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
-import { Assignment } from "../../../Schema/Management/Assignment/Assignment.Schema.js";
+import { Assignment } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
  
 /* =============================
    QUERY VALIDATION (INLINE)
@@ -50,11 +50,14 @@ export const getAssignments = asyncHandler(async (req, res) => {
     teacherId,
     from,
     to,
-    page,
-    limit,
+    page = 1,
+    limit = 20,
     sortBy,
     order,
   } = value;
+
+  const pageNum = Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page, 10) : 1;
+  const limitNum = Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit, 10) : 20;
 
   // 2️⃣ Build Query Object
   const query = {};
@@ -70,7 +73,7 @@ export const getAssignments = asyncHandler(async (req, res) => {
   }
 
   // Pagination
-  const skip = (page - 1) * limit;
+  const skip = (pageNum - 1) * limitNum;
   const sortOrder = order === "asc" ? 1 : -1;
 
   // 3️⃣ Fetch Data
@@ -81,20 +84,25 @@ export const getAssignments = asyncHandler(async (req, res) => {
       .populate("createdBy", "userId employeeId")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
-      .limit(limit)
+      .limit(limitNum)
       .lean(),
 
     Assignment.countDocuments(query),
   ]);
 
   // 4️⃣ Response
+  const sanitized = (assignments || []).map((a) => {
+    if (a.__v !== undefined) delete a.__v;
+    return a;
+  });
+
   return successResponse(res, {
     message: "Assignments fetched successfully",
     data: {
       total,
-      page,
-      limit,
-      assignments,
+      page: pageNum,
+      limit: limitNum,
+      assignments: sanitized,
     },
   });
 });

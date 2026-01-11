@@ -5,10 +5,10 @@ import { asyncHandler } from "../../../Utility/Response/AsyncHandler.Utility.js"
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
-import { Assignment } from "../../Schema/Management/Assignment/Assignment.Schema.js";
+import { Assignment } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
 import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
-import { Subject } from "../../Schema/Management/Subject/Subject.Schema.js";
+import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
  
 /* ============================
    VALIDATION SCHEMA
@@ -76,7 +76,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
     if (!subjectExists) throw new ApiError(404, "Subject not found");
 
     // 5️⃣ Verify Batches
-    const batchCount = await Batch.countDocuments({ _id: { $in: batches } });
+    const batchCount = await Batch.countDocuments({ _id: { $in: batches } }).session(session);
     if (batchCount !== batches.length) {
       throw new ApiError(400, "Some batches are invalid");
     }
@@ -121,10 +121,13 @@ export const createAssignment = asyncHandler(async (req, res) => {
     // 9️⃣ Commit Transaction
     await session.commitTransaction();
 
+    const result = assignment.toObject ? assignment.toObject() : { ...assignment };
+    if (result.__v !== undefined) delete result.__v;
+
     return successResponse(res, {
       statusCode: 201,
       message: "Assignment created successfully",
-      data: assignment,
+      data: result,
     });
   } catch (err) {
     if (session) await session.abortTransaction();

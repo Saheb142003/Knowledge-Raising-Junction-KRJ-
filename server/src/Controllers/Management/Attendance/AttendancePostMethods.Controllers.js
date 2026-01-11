@@ -11,7 +11,7 @@ import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Employee } from "../../../Schema/Management/Employee/Employee.Schema.js";
 import { Branch } from "../../../Schema/Management/Branch/Branch.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
-import { Subject } from "../../../Schema/Management/Subject/Subject.Schema.js";
+import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
 
 /* =====================================
    VALIDATION SCHEMA (INLINE)
@@ -142,10 +142,13 @@ export const markAttendance = asyncHandler(async (req, res) => {
     // 8️⃣ Commit
     await session.commitTransaction();
 
+    const result = attendance && attendance.toObject ? attendance.toObject() : { ...(attendance || {}) };
+    if (result.__v !== undefined) delete result.__v;
+
     return successResponse(res, {
       statusCode: 201,
       message: "Attendance marked successfully",
-      data: attendance,
+      data: result,
     });
   } catch (err) {
     if (session) await session.abortTransaction();
