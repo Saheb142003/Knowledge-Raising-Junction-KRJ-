@@ -16,6 +16,28 @@ export const updateCourseContentSchema = Joi.object({
 }).min(1);
 
 
+const objectId = Joi.string().custom((v, h) =>
+  mongoose.Types.ObjectId.isValid(v)
+    ? v
+    : h.message("Invalid ObjectId")
+);
+
+ const reorderCourseContentSchema = Joi.object({
+  course: objectId.required(),
+
+  orders: Joi.array()
+    .items(
+      Joi.object({
+        contentId: objectId.required(),
+        order: Joi.number().integer().min(1).required()
+      })
+    )
+    .min(1)
+    .required()
+});
+
+
+
 
 // ****************UPLOAD LOGIC IS TO BE IMPLEMENTED**************
 
@@ -143,4 +165,72 @@ const replaceCourseContentFile = asyncHandler(async (req, res) => {
   });
 });
 
+// PATCH
+const reorderCourseContents = asyncHandler(async (req, res) => {
+  /* =========================
+     1. VALIDATE
+  ========================== */
+  const { error, value } =
+    reorderCourseContentSchema.validate(req.body);
 
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
+
+  const { course, orders } = value;
+
+  /* =========================
+     2. UNIQUE ORDER CHECK
+  ========================== */
+  const orderValues = orders.map(o => o.order);
+  if (new Set(orderValues).size !== orderValues.length) {
+    throw new ApiError(400, "Duplicate order values are not allowed");
+  }
+
+  /* =========================
+     3. FETCH CONTENTS
+  ========================== */
+  const contentIds = orders.map(o => o.contentId);
+
+  const contents = await CourseContent.find({
+    _id: { $in: contentIds },
+    course
+  });
+
+  if (contents.length !== orders.length) {
+    throw new ApiError(
+      400,
+      "Some contents do not belong to the specified course"
+    );
+  }
+
+  /* =========================
+     4. TRANSACTION
+  ========================== */
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    for (const item of orders) {
+      await CourseContent.updateOne(
+        { _id: item.contentId },
+        { $set: { order: item.order } },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+
+    return successResponse(res, {
+      message: "Course contents reordered successfully"
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
+});
+
+
+export {updateCourseContent,replaceCourseContentFile,reorderCourseContents}

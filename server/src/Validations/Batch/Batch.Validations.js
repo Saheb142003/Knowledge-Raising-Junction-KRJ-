@@ -95,7 +95,10 @@ export const routine = Joi.array().items(objectId).messages({
 });
 
 export const assignments = Joi.array().items(objectId).messages({
-  "array.base": "Assignments must be an array of SlotBatchAssignment IDs",
+  "array.base": "Assignments must be an array of Assignment IDs",
+});
+export const tests = Joi.array().items(objectId).messages({
+  "array.base": "Tests must be an array of Test IDs",
 });
 export const batch = objectId.required().messages({
   "any.required": "Batch reference is required",

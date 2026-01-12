@@ -168,4 +168,5 @@ const createCourseContent = asyncHandler(async (req, res) => {
   });
 });
 
+export {bulkCreateCourseContent,createCourseContent}
 

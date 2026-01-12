@@ -35,6 +35,8 @@ import mongoose from "mongoose";
 import { Student } from "../../../Schema/Management/Student/Student.Schema.js";
 import { RoutineSlot } from "../../../Schema/Management/Routine/Routine.Schema.js";
 import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
+import { Assignment } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
+import { Test } from "../../../Schema/Management/Test/Test.Schema.js";
 
 
 
@@ -87,6 +89,13 @@ const addSubjectValidationSchema = Joi.object({
   adminId: objectId.required(),
 });
 
+const addAssignmentValidationSchema = Joi.object({
+  assignments : assignments.required()
+})
+
+const addTestValidationSchema = Joi.object({
+  tests : tests.required()
+})
 
 
 const createBatch = asyncHandler(async(req,res)=>{
@@ -894,6 +903,261 @@ const addSubjectToBatch = asyncHandler(async (req, res) => {
   }
 });
 
+const addAssignmentToBatch = asyncHandler(async (req, res) => {
+  let session;
+
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    /* =========================
+       1. VALIDATE BODY ONLY
+    ========================== */
+    const { error, value } = addAssignmentValidationSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      throw new ApiError(
+        400,
+        "Validation failed",
+        error.details.map(d => ({
+          field: d.path.join("."),
+          message: d.message,
+        }))
+      );
+    }
+
+    /* =========================
+       2. CORRECT SOURCES
+    ========================== */
+    const { assignments } = value;
+    const { batchId } = req.params;        // ✅ FROM PARAMS
+    const adminId = req.user._id;           // ✅ FROM AUTH
+
+    /* =========================
+       3. ADMIN CHECK
+    ========================== */
+    const admin = await Admin.findById(adminId).session(session);
+    if (!admin) {
+      throw new ApiError(403, "Invalid admin");
+    }
+
+    if (!admin.permissions?.includes("manage_batches")) {
+      throw new ApiError(
+        403,
+        "Admin does not have permission to manage batches"
+      );
+    }
+
+    /* =========================
+       4. BATCH CHECK
+    ========================== */
+    const batch = await Batch.findById(batchId).session(session);
+    if (!batch) {
+      throw new ApiError(404, "Batch not found");
+    }
+
+    const isBatchManager = batch.managedBy
+      .map(id => id.toString())
+      .includes(adminId.toString());
+
+    if (!isBatchManager) {
+      throw new ApiError(
+        403,
+        "Admin is not authorized to manage this batch"
+      );
+    }
+
+    /* =========================
+       5. ADD ASSIGNMENTS
+    ========================== */
+    const existingAssignmentIds = new Set(
+      batch.assignments.map(id => id.toString())
+    );
+
+    const incomingAssignmentIds = assignments.map(id => id.toString());
+
+    const alreadyPresentAssignments = incomingAssignmentIds.filter(id =>
+      existingAssignmentIds.has(id)
+    );
+
+    const newAssignmentsToAdd = incomingAssignmentIds.filter(id =>
+      !existingAssignmentIds.has(id)
+    );
+
+    if (newAssignmentsToAdd.length) {
+      await Batch.updateOne(
+        { _id: batchId },
+        { $addToSet: { assignments: { $each: newAssignmentsToAdd } } },
+        { session }
+      );
+
+      await BatchAssignment.insertMany(
+  newAssignmentsToAdd.map(assignmentId => ({
+    batch: batchId,
+    assignment: assignmentId
+  })),
+  { session }
+);
+
+    }
+
+    await session.commitTransaction();
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "Assignments processed successfully",
+      data: {
+        batchId,
+        counts: {
+          addedAssignments: newAssignmentsToAdd.length,
+          skippedAssignments: alreadyPresentAssignments.length,
+        },
+        admin: {
+          name: admin.fullName,
+          email: admin.email,
+        },
+      },
+    });
+  } catch (err) {
+    if (session) await session.abortTransaction();
+    throw err;
+  } finally {
+    if (session) session.endSession();
+  }
+});
 
 
-export {createBatch,addStudentToBatch,addRoutineToBatch,addSubjectToBatch,addTeacherToBatch}
+const addTestToBatch = asyncHandler(async (req, res) => {
+  let session;
+
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    /* =========================
+       1. VALIDATE BODY ONLY
+    ========================== */
+    const { error, value } = addTestValidationSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      throw new ApiError(
+        400,
+        "Validation failed",
+        error.details.map(d => ({
+          field: d.path.join("."),
+          message: d.message,
+        }))
+      );
+    }
+
+    /* =========================
+       2. CORRECT SOURCES
+    ========================== */
+    const { tests } = value;
+    const { batchId } = req.params;     // ✅ FIXED
+    const adminId = req.user._id;        // ✅ FIXED
+
+    /* =========================
+       3. ADMIN CHECK
+    ========================== */
+    const admin = await Admin.findById(adminId).session(session);
+    if (!admin) {
+      throw new ApiError(403, "Invalid admin");
+    }
+
+    if (!admin.permissions?.includes("manage_batches")) {
+      throw new ApiError(
+        403,
+        "Admin does not have permission to manage batches"
+      );
+    }
+
+    /* =========================
+       4. BATCH CHECK
+    ========================== */
+    const batch = await Batch.findById(batchId).session(session);
+    if (!batch) {
+      throw new ApiError(404, "Batch not found");
+    }
+
+    const isBatchManager = batch.managedBy
+      .map(id => id.toString())
+      .includes(adminId.toString());
+
+    if (!isBatchManager) {
+      throw new ApiError(
+        403,
+        "Admin is not authorized to manage this batch"
+      );
+    }
+
+    /* =========================
+       5. ADD TESTS
+    ========================== */
+    const existingTestIds = new Set(
+      batch.tests.map(id => id.toString())
+    );
+
+    const incomingTestIds = tests.map(id => id.toString());
+
+    const alreadyPresentTests = incomingTestIds.filter(id =>
+      existingTestIds.has(id)
+    );
+
+    const newTestsToAdd = incomingTestIds.filter(id =>
+      !existingTestIds.has(id)
+    );
+
+    if (newTestsToAdd.length) {
+      await Batch.updateOne(
+        { _id: batchId },
+        { $addToSet: { tests: { $each: newTestsToAdd } } },
+        { session }
+      );
+
+     await Test.updateMany(
+  { _id: { $in: newTestsToAdd } },
+  { $addToSet: { batches: batchId } },
+  { session }
+);
+
+    }
+
+    await session.commitTransaction();
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "Tests processed successfully",
+      data: {
+        batchId,
+        counts: {
+          addedTests: newTestsToAdd.length,
+          skippedTests: alreadyPresentTests.length,
+        },
+        admin: {
+          name: admin.fullName,
+          email: admin.email,
+        },
+      },
+    });
+  } catch (err) {
+    if (session) await session.abortTransaction();
+    throw err;
+  } finally {
+    if (session) session.endSession();
+  }
+});
+
+
+
+
+
+
+
+export {createBatch,addStudentToBatch,addRoutineToBatch,addSubjectToBatch,addTeacherToBatch,addTestToBatch,addAssignmentToBatch}
