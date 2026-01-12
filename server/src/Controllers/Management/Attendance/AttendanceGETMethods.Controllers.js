@@ -58,7 +58,7 @@ export const getAttendance = asyncHandler(async (req, res) => {
     );
   }
 
-  // Extract validated values
+  // Extract validated values and coerce pagination
   const {
     attendeeType,
     attendeeId,
@@ -70,11 +70,14 @@ export const getAttendance = asyncHandler(async (req, res) => {
     to,
     status,
     search,
-    page,
-    limit,
+    page = 1,
+    limit = 20,
     sortBy,
     order,
   } = value;
+
+  const pageNum = Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page, 10) : 1;
+  const limitNum = Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit, 10) : 20;
 
   // 2️⃣ BUILD MONGO QUERY OBJECT
   const query = {};
@@ -107,7 +110,7 @@ export const getAttendance = asyncHandler(async (req, res) => {
   if (search) query.remarks = { $regex: search, $options: "i" };
 
   // Pagination
-  const skip = (page - 1) * limit;
+  const skip = (pageNum - 1) * limitNum;
   const sortOrder = order === "asc" ? 1 : -1;
 
   // 3️⃣ RUN QUERY (parallel for speed)
@@ -118,22 +121,27 @@ export const getAttendance = asyncHandler(async (req, res) => {
       .populate("subject", "name code")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
-      .limit(limit)
+      .limit(limitNum)
       .lean(),
 
     Attendance.countDocuments(query),
   ]);
 
-  // 4️⃣ SEND RESPONSE
+  // 4️⃣ SEND RESPONSE (sanitize and normalize pagination)
+  const sanitized = (data || []).map((d) => {
+    if (d.__v !== undefined) delete d.__v;
+    return d;
+  });
+
   return successResponse(res, {
     message: "Attendance fetched successfully",
     filters: query,
     pagination: {
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     },
-    data,
+    data: sanitized,
   });
 });

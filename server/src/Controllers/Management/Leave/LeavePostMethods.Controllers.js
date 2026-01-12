@@ -59,53 +59,86 @@ export const applyForLeave = asyncHandler(async (req, res) => {
     remarks,
   } = value;
 
-  // Check branch
-  const branchExists = await Branch.findById(branch);
-  if (!branchExists) throw new ApiError(404, "Branch not found");
+  // Use transaction for create and validations
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-  // Validate applicant based on type
-  if (applicantType === "STUDENT") {
-    const student = await Student.findById(applicantId);
-    if (!student) throw new ApiError(404, "Student not found");
+    // Check branch
+    const branchExists = await Branch.findById(branch).session(session);
+    if (!branchExists) throw new ApiError(404, "Branch not found");
+
+    // Validate applicant based on type
+    if (applicantType === "STUDENT") {
+      const student = await Student.findById(applicantId).session(session);
+      if (!student) throw new ApiError(404, "Student not found");
+    }
+
+    if (applicantType === "TEACHER") {
+      const teacher = await Teacher.findById(applicantId).session(session);
+      if (!teacher) throw new ApiError(404, "Teacher not found");
+    }
+
+    if (applicantType === "EMPLOYEE") {
+      const employee = await Employee.findById(applicantId).session(session);
+      if (!employee) throw new ApiError(404, "Employee not found");
+    }
+
+    // Date range validation
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start > end) {
+      throw new ApiError(400, "Start date cannot be after end date");
+    }
+
+    // Duration in days
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    const durationDays = Math.floor((end - start) / ONE_DAY) + 1;
+
+    // Prevent overlapping leave requests for same applicant
+    const overlap = await Leave.findOne({
+      applicantId,
+      applicantType,
+      isDeleted: false,
+      $or: [
+        { startDate: { $lte: end }, endDate: { $gte: start } },
+      ],
+    }).session(session);
+
+    if (overlap) {
+      throw new ApiError(409, "Overlapping leave request exists for this applicant");
+    }
+
+    // Create new leave
+    const leaveDoc = new Leave({
+      applicantId,
+      applicantType,
+      branch,
+      startDate: start,
+      endDate: end,
+      durationDays,
+      reason,
+      remarks,
+      status: "PENDING",
+    });
+
+    await leaveDoc.save({ session });
+
+    await session.commitTransaction();
+
+    const out = leaveDoc.toObject ? leaveDoc.toObject() : { ...leaveDoc };
+    if (out.__v !== undefined) delete out.__v;
+
+    return successResponse(res, {
+      message: "Leave request submitted successfully",
+      data: out,
+    });
+  } catch (err) {
+    if (session) await session.abortTransaction();
+    throw err;
+  } finally {
+    if (session) session.endSession();
   }
-
-  if (applicantType === "TEACHER") {
-    const teacher = await Teacher.findById(applicantId);
-    if (!teacher) throw new ApiError(404, "Teacher not found");
-  }
-
-  if (applicantType === "EMPLOYEE") {
-    const employee = await Employee.findById(applicantId);
-    if (!employee) throw new ApiError(404, "Employee not found");
-  }
-
-  // Date range validation
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-
-  if (start > end) {
-    throw new ApiError(400, "Start date cannot be after end date");
-  }
-
-  // Duration in days
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const durationDays = Math.floor((end - start) / ONE_DAY) + 1;
-
-  // Create new leave
-  const leave = await Leave.create({
-    applicantId,
-    applicantType,
-    branch,
-    startDate: start,
-    endDate: end,
-    durationDays,
-    reason,
-    remarks,
-    status: "PENDING",
-  });
-
-  return successResponse(res, {
-    message: "Leave request submitted successfully",
-    data: leave,
-  });
 });

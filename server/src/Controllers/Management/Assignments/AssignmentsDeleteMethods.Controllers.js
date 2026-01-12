@@ -5,7 +5,7 @@ import { asyncHandler } from "../../../Utility/Response/AsyncHandler.Utility.js"
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
-import { Assignment, Submission } from "../../../Schema/Management/Assignment/Assignment.Schema.js";
+import { Assignment, Submission } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
 import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
  

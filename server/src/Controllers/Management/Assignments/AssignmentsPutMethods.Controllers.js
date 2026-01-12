@@ -5,10 +5,10 @@ import { asyncHandler } from "../../../Utility/Response/AsyncHandler.Utility.js"
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
-import { Assignment } from "../../../Schema/Management/Assignment/Assignment.Schema.js";
+import { Assignment } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
 import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
-import { Subject } from "../../../Schema/Management/Subject/Subject.Schema.js";
+import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
 
 /* == ===========================
    UPDATE VALIDATION INLINE
@@ -108,9 +108,12 @@ export const updateAssignment = asyncHandler(async (req, res) => {
     // 8️⃣ Commit transaction
     await session.commitTransaction();
 
+    const result = assignment.toObject ? assignment.toObject() : { ...assignment };
+    if (result.__v !== undefined) delete result.__v;
+
     return successResponse(res, {
       message: "Assignment updated successfully",
-      data: assignment,
+      data: result,
     });
   } catch (err) {
     if (session) await session.abortTransaction();

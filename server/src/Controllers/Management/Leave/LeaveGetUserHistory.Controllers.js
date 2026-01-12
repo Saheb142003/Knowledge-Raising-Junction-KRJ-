@@ -59,11 +59,15 @@ export const getUserLeaveHistory = asyncHandler(async (req, res) => {
     status,
     from,
     to,
-    page,
-    limit,
+    page = 1,
+    limit = 20,
     sortBy,
     order,
   } = value;
+
+  // Coerce pagination
+  const pageNum = Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page, 10) : 1;
+  const limitNum = Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit, 10) : 20;
 
   // 1️⃣ BUILD QUERY
   const query = {
@@ -80,7 +84,7 @@ export const getUserLeaveHistory = asyncHandler(async (req, res) => {
     if (to) query.startDate.$lte = new Date(to);
   }
 
-  const skip = (page - 1) * limit;
+  const skip = (pageNum - 1) * limitNum;
   const sortOrder = order === "asc" ? 1 : -1;
 
   // 2️⃣ GET HISTORY
@@ -90,21 +94,26 @@ export const getUserLeaveHistory = asyncHandler(async (req, res) => {
       .populate("approvedBy", "fullName email")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
-      .limit(limit)
+      .limit(limitNum)
       .lean(),
 
     Leave.countDocuments(query),
   ]);
 
   // 3️⃣ RESPONSE
+  const sanitized = (history || []).map((d) => {
+    if (d.__v !== undefined) delete d.__v;
+    return d;
+  });
+
   return successResponse(res, {
     message: "Leave history fetched successfully",
     pagination: {
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     },
-    data: history,
+    data: sanitized,
   });
 });
