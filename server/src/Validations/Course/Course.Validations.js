@@ -195,7 +195,7 @@ export const status = Joi.string()
 export const publishedAt = Joi.date()
   .optional();
 
-export const isActive = Joi.boolean()
+export const isActive = Joi.boolean() 
   .optional();
 
 /* =========================
