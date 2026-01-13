@@ -1,5 +1,4 @@
 import React from 'react'
-import Header from '../../../Components/Global/Header/Header'
 import Hero from '../../../Components/Global/Hero/Hero'
 import CourseMarketplace from '../../../Components/Global/Course/CourseMarketPlace'
 import WhyChooseSection from '../../../Components/Global/Institute/WhySection'
@@ -10,12 +9,10 @@ import StudentJourney from '../../../Components/Global/Institute/StudentJourney'
 import TeacherStrip from '../../../Components/Global/Faculty/TeacherStrip'
 import TopPerformers from '../../../Components/Global/Institute/TopPerformers'
 import KRJPlatform from '../../../Components/Global/Institute/KRJPlatform'
-import Footer from '../../../Components/Global/Footer/Footer'
  
 const Gateway = () => {
   return (
     <div>
-      <Header/>
       <Hero/>
       <CourseMarketplace/>
       <OfflineBatches/>
@@ -26,7 +23,6 @@ const Gateway = () => {
       <TeacherStrip/>
       <TopPerformers/>
       <KRJPlatform/>
-      <Footer/>
       
     </div>
   )
