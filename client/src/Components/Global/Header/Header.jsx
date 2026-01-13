@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom"; // Added Link
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -13,7 +13,10 @@ import {
   ArrowRight,
   ChevronRight
 } from "lucide-react";
-import Logo from "../Logo/Logo"; // Using your actual Logo component
+import Logo from "../Logo/Logo"; 
+
+// Create an animated version of the Link component for the mobile menu
+const MotionLink = motion(Link);
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,7 +51,7 @@ const Header = () => {
     { name: "Contact", href: "/contact" },
   ];
 
-  const themeOrange = "#FF7F50"; // Centralized color for reference
+  const themeOrange = "#FF7F50"; 
 
   return (
     <>
@@ -65,6 +68,7 @@ const Header = () => {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-gray-400">Have any questions?</span>
+            {/* Phone link stays as <a> because it triggers an external action */}
             <a href="tel:+919876543210" className="font-bold text-gray-800 hover:text-[#FF7F50] transition-colors">
               +91 98765 43210
             </a>
@@ -84,18 +88,19 @@ const Header = () => {
           <div className="flex justify-between items-center">
             
             {/* Logo */}
-            <div onClick={() => navigate("/")} className="cursor-pointer z-50 relative">
+            {/* Using Link here prevents page refresh on logo click */}
+            <Link to="/" className="cursor-pointer z-50 relative">
               <Logo />
-            </div>
+            </Link>
 
             {/* Desktop Nav - ORANGE CONTAINER */}
             <nav className="hidden lg:flex items-center gap-1 bg-[#FF7F50] p-1.5 rounded-full shadow-lg shadow-orange-500/20">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.href;
                 return (
-                  <a
+                  <Link
                     key={link.name}
-                    href={link.href}
+                    to={link.href}
                     className={`relative px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 ease-out ${
                       isActive 
                         ? "bg-white text-[#FF7F50] shadow-sm" // Active State
@@ -103,7 +108,7 @@ const Header = () => {
                     }`}
                   >
                     {link.name}
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -125,7 +130,7 @@ const Header = () => {
                   <User size={18} /> Login
                 </button>
                 
-                {/* ENQUIRY BUTTON (Matching Nav Style) */}
+                {/* ENQUIRY BUTTON */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -186,9 +191,9 @@ const Header = () => {
           >
             <div className="flex-1 flex flex-col space-y-2">
               {navLinks.map((link, idx) => (
-                <motion.a
+                <MotionLink
                   key={link.name}
-                  href={link.href}
+                  to={link.href}
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 + idx * 0.05 }}
@@ -199,7 +204,7 @@ const Header = () => {
                     {link.name}
                   </span>
                   <ChevronRight size={20} className="text-gray-300 group-hover:text-[#FF7F50]" />
-                </motion.a>
+                </MotionLink>
               ))}
             </div>
 
@@ -210,7 +215,10 @@ const Header = () => {
               className="mt-8 space-y-4"
             >
                <button 
-                  onClick={() => navigate("/login")}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/login");
+                  }}
                   className="w-full py-4 rounded-xl border-2 border-gray-100 font-bold text-gray-700 hover:border-[#FF7F50] hover:text-[#FF7F50] transition-colors flex items-center justify-center gap-2"
                 >
                   <User size={20} /> Student Login
