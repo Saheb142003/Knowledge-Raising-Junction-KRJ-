@@ -2,20 +2,25 @@ import mongoose from "mongoose";
 
 const feePlanSchema = new mongoose.Schema(
   {
+    // ----------------------------------------------------
+    // 1) BASIC PLAN DETAILS
+    // ----------------------------------------------------
     title: {
       type: String,
       required: true,
-      trim: true, // Example: "Class 11 Science - Regular Plan"
+      trim: true,
     },
 
     academicYear: {
       type: String, // "2024-2025"
       required: true,
+      index: true,
     },
 
     course: {
       type: String, // "Science", "JEE", "Commerce"
       required: true,
+      index: true,
     },
 
     description: {
@@ -24,7 +29,7 @@ const feePlanSchema = new mongoose.Schema(
     },
 
     totalAmount: {
-      type: Number, // Full fees for the year
+      type: Number,
       required: true,
       min: 0,
     },
@@ -45,11 +50,97 @@ const feePlanSchema = new mongoose.Schema(
       default: 0,
     },
 
-    isActive: {
+    // ----------------------------------------------------
+    // 2) NEW — PLAN CATEGORY
+    // ----------------------------------------------------
+    category: {
+      type: String,
+      enum: ["REGULAR", "DROPPER", "FOUNDATION", "ONLINE", "OTHER"],
+      default: "REGULAR",
+      index: true,
+    },
+
+    // ----------------------------------------------------
+    // 3) MAPPING WITH SUB-SCHEMAS
+    // ----------------------------------------------------
+
+    // Fee structure components under this plan
+    components: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "FeeStructure",
+      },
+    ],
+
+    // Students currently enrolled under this fee plan
+    assignedStudents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Student",
+      },
+    ],
+
+    // ----------------------------------------------------
+    // 4) ADVANCED SETTINGS (NEW)
+    // ----------------------------------------------------
+
+    // Discount rule support
+    allowDiscount: {
       type: Boolean,
       default: true,
     },
 
+    maxDiscountPercent: {
+      type: Number,
+      default: 0,
+    },
+
+    // Tax system support (if needed)
+    taxPercentage: {
+      type: Number,
+      default: 0,
+    },
+
+    // Refund rules
+    refundable: {
+      type: Boolean,
+      default: true,
+    },
+
+    refundRules: {
+      type: String,
+      default: "",
+    },
+
+    // Auto-calc settings
+    autoGenerateInstallments: {
+      type: Boolean,
+      default: true,
+    },
+
+    // ----------------------------------------------------
+    // 5) META FIELDS (NEW)
+    // ----------------------------------------------------
+
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+
+    visibleToStudents: {
+      type: Boolean,
+      default: false,
+    },
+
+    visibleOnWebsite: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ----------------------------------------------------
+    // 6) AUDIT FIELDS
+    // ----------------------------------------------------
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
@@ -59,22 +150,27 @@ const feePlanSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// Indexes for speed
+// ----------------------------------------------------
+// INDEXES (HIGH PERFORMANCE)
+// ----------------------------------------------------
 feePlanSchema.index({ academicYear: 1 });
 feePlanSchema.index({ course: 1 });
+feePlanSchema.index({ category: 1 });
 feePlanSchema.index({ isActive: 1 });
 
 export const FeePlan = mongoose.model("FeePlan", feePlanSchema);
-
-
-// ⚡ What This Schema Solves
-
-// ✔ “Class 11 Science Plan” banega
-// ✔ “JEE Long-Term Plan” banega
-// ✔ Academic year-wise fee structure maintain
-// ✔ EMI/Installment support
-// ✔ Administrative indexing ready

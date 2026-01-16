@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
-    // 1. LINK TO USER (LOGIN / AUTH)
+    // --------------------------------------------------
+    // 1) AUTH & PROFILE LINKS
+    // --------------------------------------------------
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -15,53 +17,90 @@ const employeeSchema = new mongoose.Schema(
         required: true,
     },
 
-    // 2. BASIC EMPLOYEE INFO
+    // --------------------------------------------------
+    // 2) EMPLOYEE CODE (unique)
+    // --------------------------------------------------
     employeeCode: {
       type: String,
       required: true,
-      unique: true, // e.g. EMP-2025-001
+      unique: true,
       trim: true,
+      index: true,
     },
 
+    // --------------------------------------------------
+    // 3) HR DETAILS
+    // --------------------------------------------------
     designation: {
-      type: String, // Teacher, Senior Teacher, Counselor, Manager, Accountant
+      type: String,
       required: true,
+      trim: true,
+      index: true,
     },
 
     department: {
-      type: String, // Academic, Admin, Finance, Operations
+      type: String,
       required: true,
-    }, 
+      trim: true,
+      index: true,
+    },
 
-    // 3. BRANCH ASSOCIATION
-    branches: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Branch",
-        required: true,
-      },
-    ],
-    attendance:[
-        {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Attendance",
-        required: true,
-        }
-    ],
-    holidays:[
-        {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Leave",
-        required: true,
-        }
-    ],
-    
-
-    // 4. EMPLOYMENT DETAILS
     employmentType: {
       type: String,
       enum: ["FULL_TIME", "PART_TIME", "CONTRACT"],
       default: "FULL_TIME",
+    },
+
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+
+    // --------------------------------------------------
+    // 4) BRANCH MAPPING
+    // --------------------------------------------------
+    branches: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Branch",
+        index: true,
+      },
+    ],
+
+    primaryBranch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      default: null,
+      index: true,
+    },
+
+    // --------------------------------------------------
+    // 5) ATTENDANCE + LEAVE
+    // --------------------------------------------------
+    attendance: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attendance",
+      },
+    ],
+
+    leaveRef: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Leave",
+      },
+    ],
+
+    availableToday: {
+      type: Boolean,
+      default: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["ACTIVE", "ON_LEAVE", "RESIGNED", "TERMINATED"],
+      default: "ACTIVE",
+      index: true,
     },
 
     joiningDate: {
@@ -74,103 +113,110 @@ const employeeSchema = new mongoose.Schema(
       default: null,
     },
 
-    status: {
-      type: String,
-      enum: ["ACTIVE", "ON_LEAVE", "RESIGNED", "TERMINATED"],
-      default: "ACTIVE",
-    },
- 
-    previousEmployment: [
-      {
-        organization: String,
-        role: String,
-        startDate: Date,
-        endDate: Date,
-        referenceContact: String,
-      },
-    ],
-    // 5. PAYROLL / HR
+    // --------------------------------------------------
+    // 6) PAYROLL + SALARY
+    // --------------------------------------------------
     salaryType: {
       type: String,
       enum: ["MONTHLY", "HOURLY", "PER_CLASS"],
       default: "MONTHLY",
     },
-    receivedPayRolls:[
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Payment",
-        required: true,
-      }
-    ], 
 
     salaryAmount: {
       type: Number,
       default: 0,
     },
 
+    // Added hourly rate special field
+    hourlyRate: {
+      type: Number,
+      default: 0,
+    },
+
+    // Payroll reference
+    receivedPayrolls: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Payroll",
+      },
+    ],
+
     bankDetails: {
       accountHolderName: String,
       accountNumber: String,
       bankName: String,
       ifscCode: String,
+      branchName: String,
     },
 
-    // 6. DOCUMENTS & VERIFICATION
+    // --------------------------------------------------
+    // 7) DOCUMENTS
+    // --------------------------------------------------
     documents: {
       idProof: String,
       addressProof: String,
       resume: String,
       offerLetter: String,
+      joiningLetter: String,
+      relievingLetter: String,
       certificates: [String],
     },
 
-    isVerified: {
+    documentsUploaded: {
       type: Boolean,
       default: false,
-    },
-
-    // 7. WORK METRICS (USEFUL FOR TEACHERS TOO)
-    experienceYears: {
-      type: Number,
-      default: 0,
     },
 
     remarks: {
       type: String,
       default: "",
     },
-     availableToday: {
+
+    // --------------------------------------------------
+    // 8) VERIFICATION
+    // --------------------------------------------------
+    isVerified: {
       type: Boolean,
-      default: true,
+      default: false,
     },
 
-
-
-    
-
+    // --------------------------------------------------
+    // 9) AUDIT
+    // --------------------------------------------------
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
+      default: null,
     },
 
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
+      default: null,
     },
-     deletedAt: {
+
+    deletedAt: {
       type: Date,
       default: null,
     },
 
-
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// INDEXES
+// --------------------------------------------------
+// INDEX OPTIMIZATION
+// --------------------------------------------------
 employeeSchema.index({ employeeCode: 1 });
 employeeSchema.index({ designation: 1 });
 employeeSchema.index({ department: 1 });
 employeeSchema.index({ status: 1 });
+employeeSchema.index({ primaryBranch: 1 });
+employeeSchema.index({ salaryType: 1 });
 
 export const Employee = mongoose.model("Employee", employeeSchema);

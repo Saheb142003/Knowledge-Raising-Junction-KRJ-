@@ -2,34 +2,53 @@ import mongoose from "mongoose";
 
 const announcementSchema = new mongoose.Schema(
   {
-    // Title of announcement
+    // ---------------------------
+    // BASIC CONTENT
+    // ---------------------------
     title: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // Main Description
     message: {
       type: String,
       required: true,
     },
 
-    // Who created this announcement?
+    // Optional preview image (for banners)
+    previewImage: {
+      type: String,
+      default: null,
+    },
+
+    // ---------------------------
+    // CREATED BY
+    // ---------------------------
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
       required: true,
     },
 
-    // Target audience
+    // NEW → Link to User (Teacher/Admin/Employee)
+    createdByUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // ---------------------------
+    // TARGET SYSTEM
+    // ---------------------------
     targetType: {
       type: String,
       enum: ["ALL", "STUDENT", "TEACHER", "EMPLOYEE", "CUSTOM"],
       default: "ALL",
+      index: true,
     },
 
-    // Custom target (e.g., branch or batch or specific group)
+    // CUSTOM TARGET SUPPORT
     targets: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -37,39 +56,94 @@ const announcementSchema = new mongoose.Schema(
       },
     ],
 
-    // Dynamic target model
     targetsModel: {
       type: String,
       enum: ["Student", "Teacher", "Employee", "Branch", "Batch"],
       default: "Student",
     },
 
-    // Schedule Announcement
+    // ---------------------------
+    // TIMING / SCHEDULE
+    // ---------------------------
     scheduledAt: {
       type: Date,
       default: Date.now,
-    },
-
-    // Optional attachments
-    attachments: [
-      {
-        fileUrl: String,
-        fileName: String,
-      },
-    ],
-
-    // Visibility
-    isActive: {
-      type: Boolean,
-      default: true,
+      index: true,
     },
 
     expiresAt: {
       type: Date,
       default: null,
+      index: true,
     },
 
-    // Soft delete
+    // STATUS
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["PENDING", "SENT", "EXPIRED", "CANCELLED"],
+      default: "SENT",
+    },
+
+    // ---------------------------
+    // ATTACHMENTS
+    // ---------------------------
+    attachments: [
+      {
+        fileUrl: String,
+        fileName: String,
+        fileType: {
+          type: String,
+          enum: ["IMAGE", "PDF", "DOC", "ZIP", "OTHER"],
+          default: "OTHER",
+        },
+      },
+    ],
+
+    // ---------------------------
+    // PRIORITY / CATEGORY
+    // ---------------------------
+    priority: {
+      type: String,
+      enum: ["HIGH", "MEDIUM", "LOW"],
+      default: "MEDIUM",
+    },
+
+    category: {
+      type: String,
+      enum: ["EVENT", "NOTICE", "ALERT", "WARNING", "GENERAL"],
+      default: "GENERAL",
+    },
+
+    // ---------------------------
+    // READ STATUS
+    // ---------------------------
+    readBy: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        readAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // ---------------------------
+    // SOFT DELETE
+    // ---------------------------
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
     deletedAt: {
       type: Date,
       default: null,
@@ -78,41 +152,17 @@ const announcementSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for faster fetching
+// ---------------------------
+// INDEXES
+// ---------------------------
 announcementSchema.index({ targetType: 1 });
 announcementSchema.index({ createdBy: 1 });
 announcementSchema.index({ scheduledAt: 1 });
 announcementSchema.index({ expiresAt: 1 });
+announcementSchema.index({ priority: 1 });
+announcementSchema.index({ category: 1 });
 
 export const Announcement = mongoose.model(
   "Announcement",
   announcementSchema
 );
-
-
-// Here is the Announcement Schema — for notices, alerts, announcements to Students, Teachers, Employees, or entire Branch.
-
-// (Useful for Notice Board, App Notifications, Website Banner)
-// Features Supported
-
-// Notice board for app & website
-
-// Announcements for
-
-// All users
-
-// Students-only
-
-// Teachers-only
-
-// Employees-only
-
-// Custom list (specific batches, branches)
-
-// Push notification ready
-
-// Attachments allowed
-
-// Scheduled announcements
-
-// Auto-expiry supported

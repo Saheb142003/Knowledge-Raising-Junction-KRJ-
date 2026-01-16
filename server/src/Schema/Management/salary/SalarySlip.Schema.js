@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 
 const salarySlipSchema = new mongoose.Schema(
   {
+    // -----------------------------------------------------
+    // 1) PAYROLL RUN (Monthly payroll batch)
+    // -----------------------------------------------------
     payrollRun: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "PayrollRun",
@@ -9,20 +12,28 @@ const salarySlipSchema = new mongoose.Schema(
       index: true,
     },
 
+    // -----------------------------------------------------
+    // 2) EMPLOYEE / TEACHER (Either one must be present)
+    // -----------------------------------------------------
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
-      required: false,
+      default: null,
+      index: true,
     },
 
     teacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",
-      required: false,
+      default: null,
+      index: true,
     },
 
+    // -----------------------------------------------------
+    // 3) SALARY MONTH
+    // -----------------------------------------------------
     month: {
-      type: String, // 2026-01
+      type: String, // e.g., "2026-01"
       required: true,
       index: true,
     },
@@ -34,27 +45,51 @@ const salarySlipSchema = new mongoose.Schema(
       index: true,
     },
 
-    // 💵 Salary Breakdown
-    payableDays: Number,
-    totalEarnings: Number,
-    totalDeductions: Number,
-    netPay: Number,
+    // -----------------------------------------------------
+    // 4) DAYS & ATTENDANCE SUMMARY
+    // -----------------------------------------------------
+    payableDays: { type: Number, default: 0 },
+    presentDays: { type: Number, default: 0 },
+    absentDays: { type: Number, default: 0 },
+    lateDays: { type: Number, default: 0 },
+    halfDays: { type: Number, default: 0 },
+    weeklyOffDays: { type: Number, default: 0 },
+    holidays: { type: Number, default: 0 },
 
-    // 🔍 Detailed Components (Basic, HRA, PF, ESI)
+    // -----------------------------------------------------
+    // 5) COMPONENT SNAPSHOT (Earning + Deduction)
+    // -----------------------------------------------------
     components: [
       {
-        componentId: { type: mongoose.Schema.Types.ObjectId, ref: "SalaryComponent" },
+        componentId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "SalaryComponent",
+        },
         name: String,
+        code: String,
         type: { type: String, enum: ["EARNING", "DEDUCTION"] },
+        calculationType: String, // FIXED, PERCENTAGE, FORMULA, PER_DAY, etc
         amount: Number,
+        taxable: Boolean,
+        remarks: String,
       },
     ],
 
-    // Receipt / Transaction Details
+    // -----------------------------------------------------
+    // 6) TOTALS
+    // -----------------------------------------------------
+    totalEarnings: { type: Number, default: 0 },
+    totalDeductions: { type: Number, default: 0 },
+    netPay: { type: Number, default: 0 },
+
+    // -----------------------------------------------------
+    // 7) PAYMENT RECORD
+    // -----------------------------------------------------
     paymentStatus: {
       type: String,
-      enum: ["PENDING", "PAID"],
+      enum: ["PENDING", "PROCESSING", "PAID", "FAILED"],
       default: "PENDING",
+      index: true,
     },
 
     paidAt: {
@@ -67,27 +102,56 @@ const salarySlipSchema = new mongoose.Schema(
       default: null,
     },
 
-    remarks: String,
+    paymentMethod: {
+      type: String,
+      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", null],
+      default: null,
+    },
+
+    // -----------------------------------------------------
+    // 8) TAXES (OPTIONAL BUT IMPORTANT)
+    // -----------------------------------------------------
+    pfAmount: { type: Number, default: 0 },
+    esiAmount: { type: Number, default: 0 },
+    tdsAmount: { type: Number, default: 0 },
+    professionalTax: { type: Number, default: 0 },
+
+    // -----------------------------------------------------
+    // 9) TEACHER SPECIFIC (Class Based Salary)
+    // -----------------------------------------------------
+    totalClassesTaken: { type: Number, default: 0 },
+    perClassRate: { type: Number, default: 0 },
+    classBasedEarnings: { type: Number, default: 0 },
+
+    subjectsTaught: [
+      {
+        subjectId: { type: mongoose.Schema.Types.ObjectId, ref: "Subject" },
+        classesTaken: Number,
+      },
+    ],
+
+    // -----------------------------------------------------
+    // 10) NOTES + AUDIT + SOFT DELETE
+    // -----------------------------------------------------
+    remarks: { type: String, default: "" },
+
+    preparedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+
+    deletedAt: { type: Date, default: null },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// Indexes
-salarySlipSchema.index({ payrollRun: 1 });
+// 🔥 Important Indexes
 salarySlipSchema.index({ month: 1, employeeId: 1 });
 salarySlipSchema.index({ month: 1, teacherId: 1 });
+salarySlipSchema.index({ payrollRun: 1 });
+salarySlipSchema.index({ paymentStatus: 1 });
 
 export const SalarySlip = mongoose.model("SalarySlip", salarySlipSchema);
-
-
-// Ye schema har teacher/employee ka individual salary slip store karega
-
-
-
-// 🔥 What This Schema Solves?
-
-// ✔ Every employee/teacher ka salary slip generate
-// ✔ Salary breakdown stored for auditing
-// ✔ Online payment tracking
-// ✔ PayrollRun se link for reporting
-// ✔ Branch-wise filtering possible

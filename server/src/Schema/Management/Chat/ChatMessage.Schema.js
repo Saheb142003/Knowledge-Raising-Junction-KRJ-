@@ -2,115 +2,174 @@ import mongoose from "mongoose";
 
 const chatMessageSchema = new mongoose.Schema(
   {
-    // Which Room?
-    roomId: {
+    // ---------------------------------------------------------
+    // 1) WHICH CHAT ROOM / GROUP / PRIVATE CHAT?
+    // ---------------------------------------------------------
+    chatRoom: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ChatRoom",
       required: true,
+      index: true,
     },
 
-    // Sender
+    // ---------------------------------------------------------
+    // 2) SENDER (Student/Teacher/Admin/Employee)
+    // ---------------------------------------------------------
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
-    // MESSAGE TYPE
+    senderType: {
+      type: String,
+      enum: ["STUDENT", "TEACHER", "EMPLOYEE", "ADMIN"],
+      required: true,
+    },
+
+    // ---------------------------------------------------------
+    // 3) MESSAGE CONTENT
+    // ---------------------------------------------------------
     type: {
       type: String,
-      enum: ["TEXT", "IMAGE", "FILE", "AUDIO", "VIDEO", "SYSTEM"],
+      enum: ["TEXT", "IMAGE", "VIDEO", "FILE", "AUDIO", "SYSTEM"],
       default: "TEXT",
+      index: true,
     },
 
-    // TEXT MESSAGE
     message: {
       type: String,
       trim: true,
+      default: "",
     },
 
-    // FILE URL (image, pdf, docs, audio, videos)
-    fileUrl: {
-      type: String,
+    // ---------------------------------------------------------
+    // 4) ATTACHMENTS (Your existing idea improved)
+    // ---------------------------------------------------------
+    attachments: [
+      {
+        fileUrl: String,
+        fileType: String, // pdf/png/jpg/doc/mp4 etc.
+        fileName: String,
+        fileSize: Number,
+      },
+    ],
+
+    // ---------------------------------------------------------
+    // 5) REPLY / THREAD SUPPORT (ADDED)
+    // ---------------------------------------------------------
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ChatMessage",
       default: null,
     },
 
-    // FILE META INFO
-    fileMeta: {
-      name: String,
-      size: Number,
-      mimeType: String,
-    },
-
-    // READ RECEIPTS
+    // ---------------------------------------------------------
+    // 6) READ RECEIPTS (WhatsApp style)
+    // ---------------------------------------------------------
     readBy: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        readAt: { type: Date },
       },
     ],
 
     deliveredTo: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        deliveredAt: { type: Date },
       },
     ],
 
-    // MESSAGE STATUS
+    // ---------------------------------------------------------
+    // 7) MESSAGE STATUS (Sender-side)
+    // ---------------------------------------------------------
     status: {
       type: String,
-      enum: ["SENT", "DELIVERED", "SEEN"],
+      enum: ["SENT", "DELIVERED", "SEEN", "FAILED"],
       default: "SENT",
+      index: true,
     },
 
-    // Optional message deletion
+    // ---------------------------------------------------------
+    // 8) EDIT & DELETE (ADDED PROFESSIONAL FEATURES)
+    // ---------------------------------------------------------
+    edited: {
+      type: Boolean,
+      default: false,
+    },
+
+    editedAt: {
+      type: Date,
+      default: null,
+    },
+
+    deletedForEveryone: {
+      type: Boolean,
+      default: false,
+    },
+
+    deletedFor: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        deletedAt: Date,
+      },
+    ],
+
+    // ---------------------------------------------------------
+    // 9) META INFORMATION
+    // ---------------------------------------------------------
+    reactions: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        emoji: String, // ❤️😂👍 etc.
+        reactedAt: Date,
+      },
+    ],
+
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+
+    pinnedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // ---------------------------------------------------------
+    // 10) AUDIT + SOFT DELETE
+    // ---------------------------------------------------------
     isDeleted: {
       type: Boolean,
       default: false,
     },
 
-    deletedAt: Date,
-
-    // If a message is edited
-    isEdited: {
-      type: Boolean,
-      default: false,
+    deletedAt: {
+      type: Date,
+      default: null,
     },
 
-    editedAt: Date,
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// For faster chat queries
-chatMessageSchema.index({ roomId: 1, createdAt: 1 });
-
-// For fetching unread messages
-chatMessageSchema.index({ senderId: 1, status: 1 });
+// ---------------------------------------------------------
+// INDEXES (For speed)
+// ---------------------------------------------------------
+chatMessageSchema.index({ chatRoom: 1, createdAt: 1 });
+chatMessageSchema.index({ senderId: 1 });
+chatMessageSchema.index({ type: 1 });
+chatMessageSchema.index({ replyTo: 1 });
 
 export const ChatMessage = mongoose.model(
   "ChatMessage",
   chatMessageSchema
 );
-
-
-// ✔ This chat system supports
-
-// One-to-one chat
-
-// Group chat
-
-// Batch chat
-
-// Teacher ↔ Student chat
-
-// Seen/delivered status
-
-// File sharing (images, docs, audio, pdf)
-
-// Message edit & delete
-
-// Real-time Socket.IO ready
-
-// Efficient indexing for fast chat loading

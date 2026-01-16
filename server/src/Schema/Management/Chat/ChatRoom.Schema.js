@@ -2,14 +2,19 @@ import mongoose from "mongoose";
 
 const chatRoomSchema = new mongoose.Schema(
   {
-    // ROOM TYPE
+    // ---------------------------------------------------------
+    // 1) ROOM TYPE
+    // ---------------------------------------------------------
     roomType: {
       type: String,
       enum: ["PRIVATE", "GROUP", "BATCH_GROUP", "TEACHER_STUDENT"],
       required: true,
+      index: true,
     },
 
-    // PARTICIPANTS (Users)
+    // ---------------------------------------------------------
+    // 2) PARTICIPANTS (Users)
+    // ---------------------------------------------------------
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,83 +23,162 @@ const chatRoomSchema = new mongoose.Schema(
       },
     ],
 
-    // BATCH ROOM (optional)
+    // For fast 1:1 unique room creation prevention
+    participantHash: {
+      type: String,
+      index: true,
+      default: null, // generated for PRIVATE rooms only
+    },
+
+    // ---------------------------------------------------------
+    // 3) BATCH GROUP ROOM
+    // ---------------------------------------------------------
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
       default: null,
+      index: true,
     },
 
-    // TEACHER ↔ STUDENT ROOM (optional)
+    // ---------------------------------------------------------
+    // 4) TEACHER ↔ STUDENT SPECIAL ROOM
+    // ---------------------------------------------------------
     teacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",
       default: null,
+      index: true,
     },
+
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       default: null,
+      index: true,
     },
 
-    // GROUP NAME (For custom groups)
+    // ---------------------------------------------------------
+    // 5) GROUP NAME + ICON
+    // ---------------------------------------------------------
     name: {
       type: String,
       trim: true,
+      default: null,
     },
 
-    // GROUP ICON
     icon: {
       type: String,
       default: null,
     },
 
-    // META
+    description: {
+      type: String,
+      default: "",
+    },
+
+    // ---------------------------------------------------------
+    // 6) GROUP ADMINS (ADDED)
+    // ---------------------------------------------------------
+    admins: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    // ---------------------------------------------------------
+    // 7) MESSAGE META
+    // ---------------------------------------------------------
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ChatMessage",
       default: null,
     },
 
+    lastMessageAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    // ---------------------------------------------------------
+    // 8) NOTIFICATION / MUTE
+    // ---------------------------------------------------------
+    mutedBy: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        mutedAt: Date,
+      },
+    ],
+
+    // ---------------------------------------------------------
+    // 9) SECURITY / ACCESS CONTROL
+    // ---------------------------------------------------------
+    isLocked: {
+      type: Boolean,
+      default: false, // Admin can lock group chats
+    },
+
+    onlyAdminsCanPost: {
+      type: Boolean,
+      default: false, // Similar to WhatsApp "announcement-only" groups
+    },
+
+    // ---------------------------------------------------------
+    // 10) STATUS
+    // ---------------------------------------------------------
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // ---------------------------------------------------------
+    // 11) AUDIT
+    // ---------------------------------------------------------
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
 
-    isActive: {
-      type: Boolean,
-      default: true,
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { timestamps: true }
 );
 
-// Index for fast private chat search
+// ---------------------------------------------------------
+// SPECIAL INDEXES
+// ---------------------------------------------------------
+
+// Faster search by participants
 chatRoomSchema.index({ participants: 1 });
 
-// Unique private chat room for same users
-chatRoomSchema.index(
-  { participants: 1, roomType: 1 },
-  { unique: false }
-);
+// Private chat unique prevention (using hash)
+chatRoomSchema.index({ participantHash: 1 }, { sparse: true });
+
+// Room type grouping
+chatRoomSchema.index({ roomType: 1 });
+
+// Batch rooms fast lookup
+chatRoomSchema.index({ batchId: 1 });
+
+// Teacher-student 1:1 special room
+chatRoomSchema.index({ teacherId: 1, studentId: 1 });
+
+// Last message sorting
+chatRoomSchema.index({ lastMessageAt: -1 });
 
 export const ChatRoom = mongoose.model("ChatRoom", chatRoomSchema);
-
-
-// ✔ What this supports
-
-// One-to-one chat
-
-// Group chat
-
-// Batch-wise class group
-
-// Teacher ↔ Student dedicated chat
-
-// Search fast
-
-// Last message tracking
-
-// Room icon + group name
-
-// Fully scalable
