@@ -52,7 +52,7 @@ const EComUserSchema = new mongoose.Schema(
         enum: ["STUDENT", "EMPLOYEE"]
       },
       refId: {
-        type: mongoose.Schema.Types.ObjectId
+        type: mongoose.Schema.Types.ObjectId // id card instead of _id or userId
       }
     },
 

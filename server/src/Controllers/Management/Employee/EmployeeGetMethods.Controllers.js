@@ -381,7 +381,10 @@ const getEmployeePaymentSlips = asyncHandler(async (req, res) => {
     },
   });
 });
+const getEmployeeWithoutIDCard = asyncHandler(async(req,res)=>{
 
+})
+ 
 
 
 

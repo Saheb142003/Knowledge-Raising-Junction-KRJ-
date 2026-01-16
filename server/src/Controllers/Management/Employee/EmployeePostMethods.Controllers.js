@@ -20,7 +20,12 @@ import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
 import { RoutineSlot } from "../../../Schema/Management/Routine/Routine.Schema.js";
 import { Admin } from "../../../Schema/Management/Admin/Admin.Schema.js";
 
-
+// **************ALERT!!!!**********
+/**
+ * Update the flow of creation of employee
+ * Create ID card alongwith employee creation
+ 
+ */
 
 
 // VALIDATIONS
@@ -56,7 +61,7 @@ const employeeBranchValidationSchema = Joi.object({
 
 
 // METHODS
-
+ 
 
  const createEmployerProfile = asyncHandler(async (req, res) => {
     let session;

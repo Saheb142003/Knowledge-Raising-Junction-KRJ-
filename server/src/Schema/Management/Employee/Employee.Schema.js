@@ -7,7 +7,7 @@ const employeeSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
+      unique: true, 
     }, 
     idCard:{
         type: mongoose.Schema.Types.ObjectId,
