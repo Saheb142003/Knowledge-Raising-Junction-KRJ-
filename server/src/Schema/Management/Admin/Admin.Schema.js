@@ -171,6 +171,12 @@ const adminSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     deletedAt: { type: Date, default: null },
+    jobApplications:[{
+  type: mongoose.Schema.Types.ObjectId, ref: "JobApplication"
+    }],
+    studentApplications:[{
+type: mongoose.Schema.Types.ObjectId, ref: "StudentApplication"
+    }]
   },
   {
     timestamps: true,

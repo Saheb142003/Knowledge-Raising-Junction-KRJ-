@@ -9,14 +9,12 @@ const employeeSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
-      index: true,
-    },
-
-    idCard: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "IDCard",
-      default: null,
+      unique: true, 
+    }, 
+    idCard:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "IDCard",
+        required: true,
     },
 
     // --------------------------------------------------
