@@ -187,7 +187,7 @@ const CourseFilters = () => {
           DESKTOP SIDEBAR (Sticky)
       ========================================= */}
       <aside className="hidden lg:block w-64 xl:w-72 shrink-0">
-        <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto noScroll pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="sticky top-24 max-h-[calc(180vh-120px)] overflow-y-auto noScroll pr-2 scrollbar-thin scrollbar-thumb-slate-200">
           
           {/* Sidebar Header */}
           <div className="flex items-center gap-2 mb-6">
