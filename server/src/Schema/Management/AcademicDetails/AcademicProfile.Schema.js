@@ -2,45 +2,58 @@ import mongoose from "mongoose";
 
 const AcademicProfileSchema = new mongoose.Schema(
   {
+    // ---------------------------
+    // STUDENT LINK
+    // ---------------------------
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       required: true,
-      unique: true,
-    }, 
+      unique: true, // 1 student = 1 current profile
+      index: true,
+    },
 
-    // -------- CURRENT ACADEMIC STATUS --------
+    // ---------------------------
+    // CURRENT ACADEMIC YEAR
+    // ---------------------------
     academicYear: {
-      type: String, // e.g. 2024-2025
+      type: String, // "2024-2025"
       required: true,
+      trim: true,
     },
 
     currentClassYear: {
-      type: String, // e.g. 10th, 12th, FY, SY
+      type: String, // "10th", "12th", "FY", etc.
       required: true,
+      trim: true,
     },
 
     board: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Board",
+      ref: "Board",    // keep as your original (can change if board schema updated)
       required: true,
     },
 
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
+      required: true,
+      index: true,
     },
 
     medium: {
       type: String,
-      enum: ["ENGLISH", "HINDI", "OTHER"],
+      enum: ["ENGLISH", "HINDI", "BENGALI", "ODIA", "OTHER"],
+      required: true,
     },
 
-    // -------- PREVIOUS ACADEMIC RECORDS --------
+    // ---------------------------
+    // PREVIOUS ACADEMIC HISTORY
+    // ---------------------------
     previousAcademics: [
       {
-        academicYear: String, // e.g. 2023-2024
-        classYear: String, // e.g. 9th
+        academicYear: String,
+        classYear: String,
 
         board: {
           type: mongoose.Schema.Types.ObjectId,
@@ -56,20 +69,77 @@ const AcademicProfileSchema = new mongoose.Schema(
         resultStatus: {
           type: String,
           enum: ["PASS", "FAIL", "APPEARING"],
+          default: "APPEARING",
+        },
+
+        // 🔥 Added improvement (optional)
+        medium: {
+          type: String,
+          enum: ["ENGLISH", "HINDI", "BENGALI", "ODIA", "OTHER"],
+        },
+
+        grade: {
+          type: String,
+          default: "",
+        },
+
+        documentUrl: {
+          type: String, // marksheet/TC pdf
+          default: null,
+        },
+
+        remarks: {
+          type: String,
+          default: "",
         },
       },
     ],
 
-    // -------- STATUS --------
+    // ---------------------------
+    // EXTRA DETAILS
+    // ---------------------------
+    remarks: {
+      type: String,
+      default: "",
+    },
+
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
     },
 
-    remarks: String,
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // ---------------------------
+    // AUDIT FIELDS (IMPORTANT)
+    // ---------------------------
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
+// ---------------------------
+// INDEXES FOR DASHBOARD + SPEED
+// ---------------------------
+AcademicProfileSchema.index({ studentId: 1 });
+AcademicProfileSchema.index({ academicYear: 1 });
+AcademicProfileSchema.index({ course: 1 });
+AcademicProfileSchema.index({ medium: 1 });
+AcademicProfileSchema.index({ currentClassYear: 1 });
 
 export const AcademicProfile = mongoose.model(
   "AcademicProfile",
