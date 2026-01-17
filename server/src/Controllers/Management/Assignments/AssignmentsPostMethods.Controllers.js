@@ -9,10 +9,10 @@ import { Assignment } from "../../../Schema/Management/Assignments/Assignments.S
 import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
 import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
- 
+
 /* ============================
    VALIDATION SCHEMA
-   ============================ */
+============================ */
 const assignmentCreateValidation = Joi.object({
   title: Joi.string().min(2).required(),
   description: Joi.string().allow(""),
@@ -29,8 +29,8 @@ const assignmentCreateValidation = Joi.object({
 });
 
 /* ============================
-   CREATE ASSIGNMENT CONTROLLER
-   ============================ */
+   CREATE ASSIGNMENT
+============================ */
 export const createAssignment = asyncHandler(async (req, res) => {
   let session;
 
@@ -67,22 +67,66 @@ export const createAssignment = asyncHandler(async (req, res) => {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    // 3️⃣ Verify Teacher
+    /* ======================================
+       3️⃣ Validate Teacher
+    ====================================== */
     const teacher = await Teacher.findById(createdBy).session(session);
     if (!teacher) throw new ApiError(404, "Teacher not found");
 
-    // 4️⃣ Verify Subject
-    const subjectExists = await Subject.findById(subject).session(session);
-    if (!subjectExists) throw new ApiError(404, "Subject not found");
+    /* ======================================
+       4️⃣ Validate Subject
+    ====================================== */
+    const subjectDoc = await Subject.findById(subject).session(session);
+    if (!subjectDoc) throw new ApiError(404, "Subject not found");
 
-    // 5️⃣ Verify Batches
-    const batchCount = await Batch.countDocuments({ _id: { $in: batches } }).session(session);
-    if (batchCount !== batches.length) {
+    // Teacher must teach this subject
+    if (!teacher.subjects?.includes(subject)) {
+      throw new ApiError(
+        403,
+        "Teacher is not assigned to teach this subject"
+      );
+    }
+
+    /* ======================================
+       5️⃣ Validate Batches
+    ====================================== */
+    const batchDocs = await Batch.find({ _id: { $in: batches } }).session(
+      session
+    );
+    if (batchDocs.length !== batches.length) {
       throw new ApiError(400, "Some batches are invalid");
     }
 
-    // 6️⃣ Create Assignment
-    const assignmentDocs = await Assignment.create(
+    // Each batch must contain this subject
+    const invalidBatch = batchDocs.find(
+      (b) => !b.subjects?.includes(subject)
+    );
+    if (invalidBatch) {
+      throw new ApiError(
+        400,
+        `Batch ${invalidBatch.name} does not have this subject`
+      );
+    }
+
+    /* ======================================
+       6️⃣ Prevent Duplicate Assignment
+    ====================================== */
+    const duplicate = await Assignment.findOne({
+      title,
+      subject,
+      createdBy,
+      batches: { $in: batches },
+      isDeleted: false,
+    }).session(session);
+
+    if (duplicate) {
+      throw new ApiError(409, "Similar assignment already exists");
+    }
+
+    /* ======================================
+       7️⃣ Create Assignment
+    ====================================== */
+    const [assignment] = await Assignment.create(
       [
         {
           title,
@@ -92,37 +136,51 @@ export const createAssignment = asyncHandler(async (req, res) => {
           createdBy,
           dueDate,
           maxMarks,
-          FileUrl: fileUrl || "",
+          fileUrl: fileUrl || "",
+          isDeleted: false,
         },
       ],
       { session }
     );
 
-    const assignment = assignmentDocs[0];
-
     if (!assignment) {
       throw new ApiError(500, "Failed to create assignment");
     }
 
-    // 7️⃣ Add to Teacher.assignments[]
+    /* ======================================
+       8️⃣ Add to Teacher.assignments
+    ====================================== */
     await Teacher.updateOne(
       { _id: createdBy },
       { $addToSet: { assignments: assignment._id } },
       { session }
     );
 
-    // 8️⃣ (Optional) Add assignment to batches
+    /* ======================================
+       9️⃣ Add to Subject.assignments
+    ====================================== */
+    await Subject.updateOne(
+      { _id: subject },
+      { $addToSet: { assignments: assignment._id } },
+      { session }
+    );
+
+    /* ======================================
+       🔟 Add to Batches.assignments
+    ====================================== */
     await Batch.updateMany(
       { _id: { $in: batches } },
       { $addToSet: { assignments: assignment._id } },
       { session }
     );
 
-    // 9️⃣ Commit Transaction
+    /* ======================================
+       1️⃣1️⃣ Commit Transaction
+    ====================================== */
     await session.commitTransaction();
 
-    const result = assignment.toObject ? assignment.toObject() : { ...assignment };
-    if (result.__v !== undefined) delete result.__v;
+    const result = assignment.toObject ? assignment.toObject() : assignment;
+    delete result.__v;
 
     return successResponse(res, {
       statusCode: 201,

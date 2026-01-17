@@ -4,14 +4,16 @@ import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
 import { Assignment } from "../../../Schema/Management/Assignments/Assignments.Schema.js";
- 
+
 /* =============================
-   QUERY VALIDATION (INLINE)
-   ============================= */
+   QUERY VALIDATION
+============================= */
 const assignmentQueryValidation = Joi.object({
   batchId: Joi.string().length(24).optional(),
   subjectId: Joi.string().length(24).optional(),
   teacherId: Joi.string().length(24).optional(),
+
+  isDeleted: Joi.boolean().optional(), // NEW ✔ soft-delete filter
 
   from: Joi.date().optional(),
   to: Joi.date().optional(),
@@ -19,13 +21,16 @@ const assignmentQueryValidation = Joi.object({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(20),
 
-  sortBy: Joi.string().valid("createdAt", "dueDate", "title").default("createdAt"),
+  sortBy: Joi.string()
+    .valid("createdAt", "dueDate", "title")
+    .default("createdAt"),
+
   order: Joi.string().valid("asc", "desc").default("desc"),
 });
 
 /* =============================
    GET ASSIGNMENTS CONTROLLER
-   ============================= */
+============================= */
 export const getAssignments = asyncHandler(async (req, res) => {
   // 1️⃣ Validate Query
   const { error, value } = assignmentQueryValidation.validate(req.query, {
@@ -48,6 +53,7 @@ export const getAssignments = asyncHandler(async (req, res) => {
     batchId,
     subjectId,
     teacherId,
+    isDeleted,
     from,
     to,
     page = 1,
@@ -56,15 +62,22 @@ export const getAssignments = asyncHandler(async (req, res) => {
     order,
   } = value;
 
-  const pageNum = Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page, 10) : 1;
-  const limitNum = Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit, 10) : 20;
+  const pageNum =
+    Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page) : 1;
 
-  // 2️⃣ Build Query Object
+  const limitNum =
+    Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit) : 20;
+
+  // 2️⃣ Build Query
   const query = {};
 
   if (batchId) query.batches = batchId;
   if (subjectId) query.subject = subjectId;
   if (teacherId) query.createdBy = teacherId;
+
+  if (typeof isDeleted === "boolean")
+    query.isDeleted = isDeleted;
+  else query.isDeleted = false; // default
 
   if (from || to) {
     query.createdAt = {};
@@ -80,8 +93,8 @@ export const getAssignments = asyncHandler(async (req, res) => {
   const [assignments, total] = await Promise.all([
     Assignment.find(query)
       .populate("batches", "name startYear endYear")
-      .populate("subject", "name code")
-      .populate("createdBy", "userId employeeId")
+      .populate("subject", "name code type")
+      .populate("createdBy", "fullName userId employeeId profileImage")
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(limitNum)
@@ -90,9 +103,9 @@ export const getAssignments = asyncHandler(async (req, res) => {
     Assignment.countDocuments(query),
   ]);
 
-  // 4️⃣ Response
-  const sanitized = (assignments || []).map((a) => {
-    if (a.__v !== undefined) delete a.__v;
+  // 4️⃣ Clean Response
+  const sanitized = assignments.map((a) => {
+    delete a.__v;
     return a;
   });
 
