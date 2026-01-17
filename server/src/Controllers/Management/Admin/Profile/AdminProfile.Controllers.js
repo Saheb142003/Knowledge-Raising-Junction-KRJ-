@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import {
   fullName,
   email,
-  phone, 
+  phone,
   username,
   password,
   createdBy,
@@ -77,7 +77,7 @@ const createAdmin = asyncHandler(async (req, res) => {
         error.details.map((d) => ({
           field: d.path.join("."),
           message: d.message,
-        }))
+        })),
       );
     }
 
@@ -111,7 +111,7 @@ const createAdmin = asyncHandler(async (req, res) => {
     if (existingUser) {
       throw new ApiError(
         409,
-        "User with this email or username already exists"
+        "User with this email or username already exists",
       );
     }
 
@@ -131,7 +131,7 @@ const createAdmin = asyncHandler(async (req, res) => {
           createdBy,
         },
       ],
-      { session }
+      { session },
     );
 
     const createdUser = newUsers[0];
@@ -155,7 +155,7 @@ const createAdmin = asyncHandler(async (req, res) => {
           isActive: true,
         },
       ],
-      { session }
+      { session },
     );
 
     const createdAdmin = newAdmins[0];
@@ -310,7 +310,7 @@ const updateAdmin = asyncHandler(async (req, res) => {
       error.details.map((d) => ({
         field: d.path.join("."),
         message: d.message,
-      }))
+      })),
     );
   }
 
@@ -366,4 +366,42 @@ const deleteAdmin = asyncHandler(async (req, res) => {
   });
 });
 
-export { createAdmin, getAdminProfile, getAllAdmins, updateAdmin, deleteAdmin };
+const updateAdminPermissions = asyncHandler(async (req, res) => {
+  const { adminId } = req.params;
+  const { permissions } = req.body;
+
+  const { error: idError } = objectId.required().validate(adminId);
+  if (idError) throw new ApiError(400, "Invalid Admin ID");
+
+  if (!permissions || !Array.isArray(permissions)) {
+    throw new ApiError(400, "Permissions must be an array");
+  }
+
+  const admin = await Admin.findById(adminId);
+  if (!admin) {
+    throw new ApiError(404, "Admin not found");
+  }
+
+  // Update permissions
+  admin.permissions = permissions;
+  admin.updatedBy = req.user?._id;
+
+  await admin.save();
+
+  return successResponse(res, {
+    message: "Admin permissions updated successfully",
+    data: {
+      adminId: admin._id,
+      permissions: admin.permissions,
+    },
+  });
+});
+
+export {
+  createAdmin,
+  getAdminProfile,
+  getAllAdmins,
+  updateAdmin,
+  deleteAdmin,
+  updateAdminPermissions,
+};
