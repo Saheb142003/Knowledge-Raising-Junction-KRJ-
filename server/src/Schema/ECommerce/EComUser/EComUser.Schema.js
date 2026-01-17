@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const EComUserSchema = new mongoose.Schema(
-  {
+  { 
     /* =========================
        BASIC USER INFO
     ========================== */
@@ -50,7 +50,7 @@ const EComUserSchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ["STUDENT", "EMPLOYEE"]
-      },
+      }, 
       refId: {
         type: mongoose.Schema.Types.ObjectId // id card instead of _id or userId
       }

@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
     // 1) BASIC USER DETAILS
     // ------------------------------------------------------
     fullName: {
-      type: String,
+      type: String, 
       required: true,
       trim: true,
     },
