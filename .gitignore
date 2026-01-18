@@ -13,7 +13,7 @@ server/api_docs/
 # -------------------------
 # Environment Variables
 # -------------------------
-.env
+
 .env.local
 .env.development
 .env.production
