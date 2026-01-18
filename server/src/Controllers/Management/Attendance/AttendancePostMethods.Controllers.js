@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import { asyncHandler } from "../../../Utility/Response/AsyncHandler.Utility.js";
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
- 
+
 import { Attendance } from "../../../Schema/Management/Attendance/Attendance.Schema.js";
 import { Student } from "../../../Schema/Management/Student/Student.Schema.js";
 import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
@@ -13,8 +13,9 @@ import { Branch } from "../../../Schema/Management/Branch/Branch.Schema.js";
 import { Batch } from "../../../Schema/Management/Batch/Batch.Schema.js";
 import { Subject } from "../../../Schema/Management/Subjects/Subject.Schema.js";
 
+
 /* =====================================
-   VALIDATION SCHEMA (INLINE)
+   VALIDATION SCHEMA
 ===================================== */
 const attendanceCreateValidation = Joi.object({
   attendeeType: Joi.string()
@@ -26,7 +27,6 @@ const attendanceCreateValidation = Joi.object({
   branch: Joi.string().length(24).required(),
 
   batch: Joi.string().length(24).allow(null, "").optional(),
-
   subject: Joi.string().length(24).allow(null, "").optional(),
 
   date: Joi.date().required(),
@@ -41,16 +41,20 @@ const attendanceCreateValidation = Joi.object({
   markedBy: Joi.string().length(24).required(),
 
   remarks: Joi.string().allow("").optional(),
+
+  // EXTRA FEATURE FOR FUTURE:
+  softCreate: Joi.boolean().optional(), // (NOT used now)
 });
 
+
 /* =====================================
-   CREATE ATTENDANCE CONTROLLER
+   CREATE ATTENDANCE
 ===================================== */
 export const markAttendance = asyncHandler(async (req, res) => {
   let session;
 
   try {
-    // 1️⃣ Validate body
+    /* 1️⃣ Validate input */
     const { error, value } = attendanceCreateValidation.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
@@ -81,44 +85,74 @@ export const markAttendance = asyncHandler(async (req, res) => {
       remarks,
     } = value;
 
-    // 2️⃣ Start DB transaction
+
+    /* 2️⃣ Start Transaction */
     session = await mongoose.startSession();
     session.startTransaction();
 
-    // 3️⃣ Validate branch
+
+    /* 3️⃣ Validate Branch */
     const branchExists = await Branch.findById(branch).session(session);
     if (!branchExists) throw new ApiError(404, "Branch not found");
 
-    // 4️⃣ Validate batch (if provided)
+
+    /* 4️⃣ Validate Batch if present */
     if (batch) {
       const batchExists = await Batch.findById(batch).session(session);
       if (!batchExists) throw new ApiError(404, "Batch not found");
     }
 
-    // 5️⃣ Validate subject (if provided)
+
+    /* 5️⃣ Validate Subject if present */
     if (subject) {
       const subjectExists = await Subject.findById(subject).session(session);
       if (!subjectExists) throw new ApiError(404, "Subject not found");
     }
 
-    // 6️⃣ Validate attendee based on type
+
+    /* 6️⃣ Validate attendee & enforce rules */
     if (attendeeType === "STUDENT") {
-      const studentExists = await Student.findById(attendeeId).session(session);
-      if (!studentExists) throw new ApiError(404, "Student not found");
+      const student = await Student.findById(attendeeId).session(session);
+      if (!student) throw new ApiError(404, "Student not found");
+
+      // If student → batch must match student.batch (optional rule)
+      // (REMOVE if not needed)
+      /*
+      if (batch && student.batches && !student.batches.includes(batch)) {
+        throw new ApiError(400, "Student does not belong to this batch");
+      }
+      */
     }
 
     if (attendeeType === "TEACHER") {
-      const teacherExists = await Teacher.findById(attendeeId).session(session);
-      if (!teacherExists) throw new ApiError(404, "Teacher not found");
+      const teacher = await Teacher.findById(attendeeId).session(session);
+      if (!teacher) throw new ApiError(404, "Teacher not found");
+
+      // TEACHER → batch is OPTIONAL
+      // TEACHER → subject recommended
     }
 
     if (attendeeType === "EMPLOYEE") {
-      const employeeExists = await Employee.findById(attendeeId).session(session);
-      if (!employeeExists) throw new ApiError(404, "Employee not found");
+      const employee = await Employee.findById(attendeeId).session(session);
+      if (!employee) throw new ApiError(404, "Employee not found");
+
+      // EMPLOYEE → batch & subject MUST be null
+      // (REMOVE if not needed)
+      /*
+      if (batch || subject) {
+        throw new ApiError(400, "Employee attendance cannot have batch/subject");
+      }
+      */
     }
 
-    // 7️⃣ Create attendance (schema prevents duplicate)
-    const attendanceDocs = await Attendance.create(
+
+    /* 7️⃣ Prevent duplicate attendance for same person on same date
+          Our schema already enforces unique index:
+          attendeeType + attendeeId + date
+    */
+
+    /* 8️⃣ Create Attendance */
+    const [attendance] = await Attendance.create(
       [
         {
           attendeeType,
@@ -137,19 +171,19 @@ export const markAttendance = asyncHandler(async (req, res) => {
       { session }
     );
 
-    const attendance = attendanceDocs[0];
 
-    // 8️⃣ Commit
+    /* 9️⃣ Commit */
     await session.commitTransaction();
 
-    const result = attendance && attendance.toObject ? attendance.toObject() : { ...(attendance || {}) };
-    if (result.__v !== undefined) delete result.__v;
+    const result = attendance?.toObject ? attendance.toObject() : attendance;
+    if (result?.__v !== undefined) delete result.__v;
 
     return successResponse(res, {
       statusCode: 201,
       message: "Attendance marked successfully",
       data: result,
     });
+
   } catch (err) {
     if (session) await session.abortTransaction();
     throw err;

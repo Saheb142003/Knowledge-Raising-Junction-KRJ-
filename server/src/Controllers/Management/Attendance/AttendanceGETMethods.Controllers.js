@@ -4,9 +4,9 @@ import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
 
 import { Attendance } from "../../../Schema/Management/Attendance/Attendance.Schema.js";
- 
+
 /* ======================================================
-   VALIDATION SCHEMA (Handles all filters)
+   VALIDATION SCHEMA (ALL FILTERS)
 ====================================================== */
 const attendanceQuerySchema = Joi.object({
   attendeeType: Joi.string().valid("STUDENT", "TEACHER", "EMPLOYEE").optional(),
@@ -24,7 +24,10 @@ const attendanceQuerySchema = Joi.object({
     .valid("PRESENT", "ABSENT", "LATE", "HALF_DAY", "ON_LEAVE")
     .optional(),
 
-  search: Joi.string().optional(), // search remarks
+  search: Joi.string().optional(), // Search in remarks
+
+  // 🚀 NEW (optional): fetch only active / soft-deleted
+  isDeleted: Joi.boolean().optional(), // REMOVE if not needed
 
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(200).default(20),
@@ -34,14 +37,17 @@ const attendanceQuerySchema = Joi.object({
     .default("date"),
 
   order: Joi.string().valid("asc", "desc").default("desc"),
+
+  // 🚀 NEW: resolve student/teacher/employee details (optional)
+  resolveFor: Joi.string().valid("STUDENT", "TEACHER", "EMPLOYEE").optional(),
 });
 
-/* ======================================================
-   ONE ROUTE → ALL GET METHODS
-====================================================== */
 
+/* ======================================================
+   MASTER GET CONTROLLER
+====================================================== */
 export const getAttendance = asyncHandler(async (req, res) => {
-  // 1️⃣ VALIDATE QUERY
+  /* 1️⃣ Validate query */
   const { error, value } = attendanceQuerySchema.validate(req.query, {
     abortEarly: false,
     stripUnknown: true,
@@ -58,7 +64,6 @@ export const getAttendance = asyncHandler(async (req, res) => {
     );
   }
 
-  // Extract validated values and coerce pagination
   const {
     attendeeType,
     attendeeId,
@@ -70,34 +75,31 @@ export const getAttendance = asyncHandler(async (req, res) => {
     to,
     status,
     search,
+    isDeleted, // NEW FILTER
+    resolveFor, // NEW FLAG
     page = 1,
     limit = 20,
     sortBy,
     order,
   } = value;
 
-  const pageNum = Number.isFinite(Number(page)) && Number(page) > 0 ? parseInt(page, 10) : 1;
-  const limitNum = Number.isFinite(Number(limit)) && Number(limit) > 0 ? parseInt(limit, 10) : 20;
+  const pageNum = Number(page);
+  const limitNum = Number(limit);
 
-  // 2️⃣ BUILD MONGO QUERY OBJECT
+  /* 2️⃣ Build query */
   const query = {};
 
-  // Person based filter
   if (attendeeType) query.attendeeType = attendeeType;
   if (attendeeId) query.attendeeId = attendeeId;
 
-  // Location + class filters
   if (branch) query.branch = branch;
   if (batch) query.batch = batch;
   if (subject) query.subject = subject;
 
-  // Status filter
   if (status) query.status = status;
 
-  // Single date
-  if (date) {
-    query.date = new Date(date);
-  }
+  // Single date filter
+  if (date) query.date = new Date(date);
 
   // Date range
   if (from || to) {
@@ -107,18 +109,49 @@ export const getAttendance = asyncHandler(async (req, res) => {
   }
 
   // Search inside remarks
-  if (search) query.remarks = { $regex: search, $options: "i" };
+  if (search) {
+    query.remarks = { $regex: search, $options: "i" };
+  }
+
+  // Soft delete filter (OPTIONAL)
+  if (typeof isDeleted === "boolean") {
+    query.isDeleted = isDeleted;
+  }
 
   // Pagination
   const skip = (pageNum - 1) * limitNum;
   const sortOrder = order === "asc" ? 1 : -1;
 
-  // 3️⃣ RUN QUERY (parallel for speed)
+  /* 3️⃣ Massive optimization: lean + safe population */
+  let populateConfig = [
+    {
+      path: "branch",
+      select: "name branchCode",
+    },
+    {
+      path: "batch",
+      select: "name code",
+    },
+    {
+      path: "subject",
+      select: "name code",
+    },
+  ];
+
+  // 🚀 NEW OPTIONAL – add dynamic population for student/teacher/employee
+  if (resolveFor === "STUDENT")
+    populateConfig.push({ path: "attendeeId", select: "fullName userId" });
+
+  if (resolveFor === "TEACHER")
+    populateConfig.push({ path: "attendeeId", select: "userId employeeId" });
+
+  if (resolveFor === "EMPLOYEE")
+    populateConfig.push({ path: "attendeeId", select: "name employeeCode" });
+
+  /* 4️⃣ Execute Query */
   const [data, total] = await Promise.all([
     Attendance.find(query)
-      .populate("branch", "name branchCode")
-      .populate("batch", "name code")
-      .populate("subject", "name code")
+      .populate(populateConfig)
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(limitNum)
@@ -127,12 +160,13 @@ export const getAttendance = asyncHandler(async (req, res) => {
     Attendance.countDocuments(query),
   ]);
 
-  // 4️⃣ SEND RESPONSE (sanitize and normalize pagination)
+  /* 5️⃣ Sanitize */
   const sanitized = (data || []).map((d) => {
-    if (d.__v !== undefined) delete d.__v;
+    delete d.__v;
     return d;
   });
 
+  /* 6️⃣ Response */
   return successResponse(res, {
     message: "Attendance fetched successfully",
     filters: query,
