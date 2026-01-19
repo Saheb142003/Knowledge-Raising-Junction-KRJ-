@@ -106,4 +106,6 @@ const updateCourse = asyncHandler(async (req, res) => {
   });
 });
 
+
+
 export {updateCourse}

@@ -53,7 +53,7 @@ const EComUserSchema = new mongoose.Schema(
       }, 
       refId: {
         type: mongoose.Schema.Types.ObjectId // id card instead of _id or userId
-      }
+      } 
     },
 
     managementCode: {
@@ -96,7 +96,7 @@ const EComUserSchema = new mongoose.Schema(
         lastUsedAt: Date
       }
     ],
-
+ 
     /* =========================
        SECURITY
     ========================== */

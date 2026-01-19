@@ -13,7 +13,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Logo from './Logo'; // Adjust import path
+import Logo from '../Logo/Logo';
+// Adjust import path
 
 // --- MOCK TEACHER CONTEXT ---
 const TEACHER_INFO = {

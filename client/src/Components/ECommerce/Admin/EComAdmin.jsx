@@ -12,7 +12,8 @@ import {
   Store
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Logo from './Logo'; // Adjust import path
+import Logo from '../../Global/Logo/Logo';
+// Adjust import path
 
 // --- MOCK COMMERCE ADMIN CONTEXT ---
 const ADMIN_INFO = {

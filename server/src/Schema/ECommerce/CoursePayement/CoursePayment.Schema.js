@@ -5,7 +5,7 @@ const CoursePaymentSchema = new mongoose.Schema(
     /* =========================
        REFERENCES
     ========================== */
-    user: {
+    user: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: "EComUser",
       required: true,
