@@ -5,8 +5,6 @@ import connectDB from "./src/Configs/Database/connectDB.Config.js";
 import cookieParser from "cookie-parser";
 import router from "./src/Routes/Management/students/student.routes.js";
 
-
-
 configDotenv();
 
 connectDB();
@@ -20,7 +18,7 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
-  })
+  }),
 );
 app.use(cookieParser());
 
@@ -36,7 +34,7 @@ connectDB()
   });
 
 // Routes
-app.use("/api/v1/user",router);
+app.use("/api/v1/user", router);
 
 app.get("/", (req, res) => {
   res.send("Server Started Successfully, you are in the homepage...");

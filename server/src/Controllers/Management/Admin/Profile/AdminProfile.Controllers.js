@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import {
   fullName,
   email,
-  phone, 
+  phone,
   username,
   password,
   createdBy,
@@ -57,6 +57,98 @@ const updateAdminValidationSchema = Joi.object({
 
 // METHODS
 
+// SEED SUPER ADMIN
+const seedSuperAdmin = asyncHandler(async (req, res) => {
+  const adminCount = await Admin.countDocuments();
+  if (adminCount > 0) {
+    throw new ApiError(403, "Admins already exist. Cannot seed.");
+  }
+
+  let session;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    // Validate minimal input
+    const schema = Joi.object({
+      fullName: fullName.required(),
+      email: email.required(),
+      username: username.required(),
+      password: password.required(),
+      phone: phone.required(),
+    });
+
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      throw new ApiError(400, "Validation failed", error.details);
+    }
+
+    const { fullName, email, username, password, phone } = value;
+
+    // Check existing user
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    }).session(session);
+
+    if (existingUser) {
+      throw new ApiError(409, "User already exists");
+    }
+
+    const SALT_ROUNDS = Number(process.env.BCRYPT_SALT) || 10;
+    const hashedPass = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Create User
+    const newUsers = await User.create(
+      [
+        {
+          fullName,
+          email,
+          username,
+          password: hashedPass,
+          phone,
+          role: "SUPER_ADMIN",
+          // No createdBy for the first admin
+        },
+      ],
+      { session },
+    );
+    const createdUser = newUsers[0];
+
+    // Create Admin
+    const newAdmins = await Admin.create(
+      [
+        {
+          userId: createdUser._id,
+          role: "super_admin",
+          permissions: [], // Super admin has all permissions implicitly or we can list them
+          isActive: true,
+          // No createdBy
+        },
+      ],
+      { session },
+    );
+    const createdAdmin = newAdmins[0];
+
+    await session.commitTransaction();
+
+    return successResponse(res, {
+      statusCode: 201,
+      message: "Super Admin seeded successfully",
+      data: {
+        userId: createdUser._id,
+        adminId: createdAdmin._id,
+        role: createdAdmin.role,
+        email: createdUser.email,
+      },
+    });
+  } catch (error) {
+    if (session) await session.abortTransaction();
+    throw error;
+  } finally {
+    if (session) session.endSession();
+  }
+});
+
 const createAdmin = asyncHandler(async (req, res) => {
   let session;
   try {
@@ -77,7 +169,7 @@ const createAdmin = asyncHandler(async (req, res) => {
         error.details.map((d) => ({
           field: d.path.join("."),
           message: d.message,
-        }))
+        })),
       );
     }
 
@@ -111,7 +203,7 @@ const createAdmin = asyncHandler(async (req, res) => {
     if (existingUser) {
       throw new ApiError(
         409,
-        "User with this email or username already exists"
+        "User with this email or username already exists",
       );
     }
 
@@ -131,7 +223,7 @@ const createAdmin = asyncHandler(async (req, res) => {
           createdBy,
         },
       ],
-      { session }
+      { session },
     );
 
     const createdUser = newUsers[0];
@@ -155,7 +247,7 @@ const createAdmin = asyncHandler(async (req, res) => {
           isActive: true,
         },
       ],
-      { session }
+      { session },
     );
 
     const createdAdmin = newAdmins[0];
@@ -310,7 +402,7 @@ const updateAdmin = asyncHandler(async (req, res) => {
       error.details.map((d) => ({
         field: d.path.join("."),
         message: d.message,
-      }))
+      })),
     );
   }
 
@@ -366,4 +458,43 @@ const deleteAdmin = asyncHandler(async (req, res) => {
   });
 });
 
-export { createAdmin, getAdminProfile, getAllAdmins, updateAdmin, deleteAdmin };
+const updateAdminPermissions = asyncHandler(async (req, res) => {
+  const { adminId } = req.params;
+  const { permissions } = req.body;
+
+  const { error: idError } = objectId.required().validate(adminId);
+  if (idError) throw new ApiError(400, "Invalid Admin ID");
+
+  if (!permissions || !Array.isArray(permissions)) {
+    throw new ApiError(400, "Permissions must be an array");
+  }
+
+  const admin = await Admin.findById(adminId);
+  if (!admin) {
+    throw new ApiError(404, "Admin not found");
+  }
+
+  // Update permissions
+  admin.permissions = permissions;
+  admin.updatedBy = req.user?._id;
+
+  await admin.save();
+
+  return successResponse(res, {
+    message: "Admin permissions updated successfully",
+    data: {
+      adminId: admin._id,
+      permissions: admin.permissions,
+    },
+  });
+});
+
+export {
+  seedSuperAdmin,
+  createAdmin,
+  getAdminProfile,
+  getAllAdmins,
+  updateAdmin,
+  deleteAdmin,
+  updateAdminPermissions,
+};

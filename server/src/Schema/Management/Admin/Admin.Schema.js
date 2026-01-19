@@ -24,31 +24,29 @@ const adminSchema = new mongoose.Schema(
     // -----------------------------
     // ROLE & PERMISSIONS
     // -----------------------------
+    // Can be string (enum) OR Ref to Role schema. Supporting both for backward compatibility or future migration.
     role: {
       type: String,
       enum: ["super_admin", "manager", "editor", "viewer"],
       default: "manager",
       index: true,
     },
+    // Optional Ref if using dynamic roles
+    roleRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+    },
 
     permissions: [
       {
-        type: String,
-        enum: [
-          "manage_users",
-          "manage_teachers",
-          "manage_employees",
-          "manage_students",
-          "manage_courses",
-          "manage_payments",
-          "manage_branches",
-          "manage_batches",
-          "manage_admins",
-          "manage_schedule",
-          "manage_content",
-          "view_reports",
-          "system_settings",
-        ],
+        type: String, // Keeping string for now to avoid breaking Utils
+      },
+    ],
+    // Optional Ref if using dynamic permissions
+    permissionRefs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Permission",
       },
     ],
 
@@ -110,30 +108,35 @@ const adminSchema = new mongoose.Schema(
     // -----------------------------
     // ADMIN SETTINGS
     // -----------------------------
+    // Ref to SystemSetting or embedded object. Keeping embedded for simple per-admin settings,
+    // but adding Ref for global/complex settings if needed.
     settings: {
       theme: { type: String, default: "light" },
       emailNotifications: { type: Boolean, default: true },
       dashboardLayout: { type: mongoose.Schema.Types.Mixed, default: {} },
     },
 
-    // -----------------------------
-    // LOGGING
-    // -----------------------------
-    logs: [
+    systemSettings: [
       {
-        action: { type: String, required: true },
-        target: { type: String },
-        timestamp: { type: Date, default: Date.now },
-        details: { type: mongoose.Schema.Types.Mixed },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SystemSetting",
       },
     ],
 
-    // OPTIONAL: Track changes
-    updateLogs: [
+    // -----------------------------
+    // LOGGING (Refs to new Schemas)
+    // -----------------------------
+    auditLogs: [
       {
-        updatedAt: { type: Date, default: Date.now },
-        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
-        change: mongoose.Schema.Types.Mixed,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AuditLog",
+      },
+    ],
+
+    loginLogs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LoginLog",
       },
     ],
 
@@ -156,31 +159,29 @@ const adminSchema = new mongoose.Schema(
       index: true,
     },
 
-    // NEW: login logs
-    loginHistory: [
-      {
-        ip: String,
-        device: String,
-        loggedInAt: { type: Date, default: Date.now },
-      },
-    ],
-
     // -----------------------------
     // AUDIT FIELDS
     // -----------------------------
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     deletedAt: { type: Date, default: null },
-    jobApplications:[{
-  type: mongoose.Schema.Types.ObjectId, ref: "JobApplication"
-    }],
-    studentApplications:[{
-type: mongoose.Schema.Types.ObjectId, ref: "StudentApplication"
-    }]
+
+    jobApplications: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "JobApplication",
+      },
+    ],
+    studentApplications: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "StudentApplication",
+      },
+    ],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // --------------------------------

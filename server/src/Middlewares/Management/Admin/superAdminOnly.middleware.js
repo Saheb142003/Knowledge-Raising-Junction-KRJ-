@@ -40,7 +40,7 @@ export const superAdminOnlyMiddleware = async (req, res, next) => {
     if (admin.role !== "SUPER_ADMIN") {
       throw new ApiError(
         403,
-        "Access Forbidden — Only Super Admin can perform this action"
+        "Access Forbidden — Only Super Admin can perform this action",
       );
     }
 
