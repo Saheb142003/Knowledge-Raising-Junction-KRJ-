@@ -1,4 +1,5 @@
 import {
+  seedSuperAdmin,
   createAdmin,
   getAdminProfile,
   getAllAdmins,
@@ -34,6 +35,7 @@ export {
   adminLogin,
   adminLogout,
   // Profile
+  seedSuperAdmin,
   createAdmin,
   getAdminProfile,
   getAllAdmins,
