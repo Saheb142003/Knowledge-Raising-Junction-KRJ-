@@ -27,6 +27,25 @@ import CourseContentSchema from "../../../Schema/ECommerce/CourseContent/CourseC
     .required()
 });
 
+const addCourseContentValidationSchema = Joi.object({
+    course: course.required(),
+
+    title: title.required(),
+
+    description,
+
+    type: type.required(),
+
+    order: order.required(),
+
+    contentUrl: contentUrl.required(),
+
+    durationInMinutes,
+
+    fileSizeMB,
+
+    isFreePreview
+  });
 
 const bulkCreateCourseContent = asyncHandler(async (req, res) => {
   /* =========================
@@ -168,5 +187,98 @@ const createCourseContent = asyncHandler(async (req, res) => {
   });
 });
 
-export {bulkCreateCourseContent,createCourseContent}
+
+
+const addCourseContent = asyncHandler(async (req, res) => {
+  /* =========================
+     1. VALIDATE REQUEST BODY
+  ========================== */
+  
+
+  const { error, value } = addCourseContentValidationSchema.validate(req.body, {
+    abortEarly: false
+  });
+
+  if (error) {
+    throw new ApiError(
+      400,
+      error.details.map(d => d.message).join(", ")
+    );
+  }
+
+  /* =========================
+     2. EXTRACT DATA
+  ========================== */
+  const {
+    course: courseId,
+    title,
+    description,
+    type,
+    order,
+    contentUrl,
+    durationInMinutes,
+    fileSizeMB,
+    isFreePreview
+  } = value;
+
+  /* =========================
+     3. VERIFY COURSE EXISTS
+  ========================== */
+  const courseDoc = await CourseSchema.findById(courseId);
+
+  if (!courseDoc) {
+    throw new ApiError(404, "Course not found");
+  }
+
+  /* =========================
+     4. PREVENT DUPLICATE ORDER
+  ========================== */
+  const orderExists = courseDoc.content.some(
+    (c) => c.order === order
+  );
+
+  if (orderExists) {
+    throw new ApiError(
+      409,
+      `Content with order ${order} already exists`
+    );
+  }
+
+  /* =========================
+     5. CREATE COURSE CONTENT
+  ========================== */
+  const content = await CourseContentSchema.create({
+    course: courseId,
+    title,
+    description,
+    type,
+    order,
+    contentUrl,
+    durationInMinutes,
+    fileSizeMB,
+    isFreePreview,
+    createdBy: "SUPER_ADMIN"
+  });
+
+  /* =========================
+     6. ATTACH CONTENT TO COURSE
+  ========================== */
+  courseDoc.content.push({
+    content: content._id,
+    order,
+    isPreview: isFreePreview ?? false
+  });
+
+  await courseDoc.save();
+
+  /* =========================
+     7. RESPONSE
+  ========================== */
+  return successResponse(res, {
+    message: "Course content added successfully",
+    data: content
+  });
+});
+
+export {bulkCreateCourseContent,createCourseContent,addCourseContent}
 
