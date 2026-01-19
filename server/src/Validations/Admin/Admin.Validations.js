@@ -1,6 +1,8 @@
 import Joi from "joi";
 
-/* ------------------ COMMON HELPERS ------------------ */
+/* -----------------------------------------------------
+   1) COMMON HELPERS
+----------------------------------------------------- */
 
 export const objectId = Joi.string().hex().length(24).messages({
   "string.base": "ID must be a string",
@@ -8,121 +10,129 @@ export const objectId = Joi.string().hex().length(24).messages({
   "string.length": "ID must be a valid 24-character ObjectId",
 });
 
+export const dateField = Joi.date().iso().messages({
+  "date.base": "Value must be a valid ISO date",
+  "date.format": "Date must be in ISO format",
+});
+
 export const booleanField = Joi.boolean().messages({
   "boolean.base": "Value must be true or false",
 });
 
-export const dateField = Joi.date().messages({
-  "date.base": "Value must be a valid date",
+// Helper for arrays of ObjectIds
+const idArray = (name) => Joi.array().items(objectId).unique().messages({
+  "array.base": `${name} must be an array of IDs`,
+  "array.unique": `${name} cannot contain duplicate IDs`,
 });
 
-/* ------------------ CORE REFERENCES ------------------ */
+/* -----------------------------------------------------
+   2) CORE REFERENCES
+----------------------------------------------------- */
 
 export const userId = objectId.required().messages({
   "any.required": "User ID is required for admin profile",
 });
 
-export const employeeId = objectId.allow(null).messages({
-  "any.only": "Invalid employee reference",
-});
+export const employeeId = objectId.allow(null);
 
-/* ------------------ ROLE & PERMISSIONS ------------------ */
+/* -----------------------------------------------------
+   3) ROLE & PERMISSIONS
+----------------------------------------------------- */
 
 export const role = Joi.string()
   .valid("super_admin", "manager", "editor", "viewer")
+  .default("manager")
   .messages({
-    "any.only":
-      "Role must be super_admin, manager, editor, or viewer",
+    "any.only": "Role must be super_admin, manager, editor, or viewer",
   });
 
-export const permission = Joi.string().valid(
+export const roleUpdatedAt = dateField.allow(null);
+
+// Updated list based on your schema
+const validPermissions = [
   "manage_users",
   "manage_teachers",
+  "manage_employees",
   "manage_students",
   "manage_courses",
   "manage_payments",
   "manage_branches",
+  "manage_batches",
   "manage_admins",
   "manage_schedule",
   "manage_content",
   "view_reports",
-  "system_settings"
-);
+  "system_settings",
+];
 
-export const permissions = Joi.array().items(permission).messages({
-  "array.base": "Permissions must be an array of valid permission strings",
-});
+export const permissions = Joi.array()
+  .items(Joi.string().valid(...validPermissions))
+  .unique()
+  .messages({
+    "array.base": "Permissions must be an array of valid permission strings",
+    "any.only": "Invalid permission provided",
+  });
 
-/* ------------------ BRANCH ACCESS ------------------ */
+/* -----------------------------------------------------
+   4) BRANCH & BATCH ACCESS
+----------------------------------------------------- */
 
-export const branches = Joi.array().items(objectId).messages({
-  "array.base": "Branches must be an array of branch IDs",
-});
+export const createdBranches = idArray("Created Branches");
+export const managedBranches = idArray("Managed Branches");
 
-/* ------------------ HIERARCHY ------------------ */
+export const createdBatches = idArray("Created Batches");
+export const managedBatches = idArray("Managed Batches");
 
-export const managedBy = objectId.allow(null).messages({
-  "any.only": "Invalid managedBy admin reference",
-});
+export const managedBy = objectId.allow(null);
 
-/* ------------------ NOTIFICATIONS ------------------ */
+/* -----------------------------------------------------
+   5) SETTINGS & NOTIFICATIONS
+----------------------------------------------------- */
 
-export const notifications = Joi.array().items(objectId).messages({
-  "array.base": "Notifications must be an array of notification IDs",
-});
-
-/* ------------------ SETTINGS ------------------ */
+export const notifications = idArray("Notifications");
 
 export const settings = Joi.object({
-  theme: Joi.string().valid("light", "dark").messages({
-    "any.only": "Theme must be light or dark",
-  }),
-  emailNotifications: booleanField,
-  dashboardLayout: Joi.object().unknown(true).messages({
-    "object.base": "Dashboard layout must be an object",
-  }),
-}).messages({
-  "object.base": "Settings must be an object",
+  theme: Joi.string().default("light"),
+  emailNotifications: booleanField.default(true),
+  dashboardLayout: Joi.object().unknown().default({}),
+}).default({});
+
+/* -----------------------------------------------------
+   6) LOGGING & HISTORY
+----------------------------------------------------- */
+
+const logEntrySchema = Joi.object({
+  action: Joi.string().required(),
+  target: Joi.string().allow(""),
+  timestamp: dateField.default(Date.now),
+  details: Joi.object().unknown(),
 });
 
-/* ------------------ LOGS ------------------ */
+export const logs = Joi.array().items(logEntrySchema);
 
-export const logEntry = Joi.object({
-  action: Joi.string().trim().min(2).max(100).required().messages({
-    "string.empty": "Log action is required",
-    "string.min": "Log action must be at least 2 characters long",
-    "string.max": "Log action must not exceed 100 characters",
-  }),
-  target: Joi.string().trim().max(100).messages({
-    "string.base": "Log target must be a string",
-    "string.max": "Log target must not exceed 100 characters",
-  }),
-  timestamp: dateField,
-  details: Joi.object().unknown(true).messages({
-    "object.base": "Log details must be an object",
-  }),
+const loginHistoryItem = Joi.object({
+  ip: Joi.string().ip().allow(""),
+  device: Joi.string().allow(""),
+  loggedInAt: dateField.default(Date.now),
 });
 
-export const logs = Joi.array().items(logEntry).messages({
-  "array.base": "Logs must be an array of log entries",
-});
+export const loginHistory = Joi.array().items(loginHistoryItem);
 
-/* ------------------ STATUS & META ------------------ */
+/* -----------------------------------------------------
+   7) APPLICATIONS
+----------------------------------------------------- */
 
-export const isActive = booleanField;
+export const jobApplications = idArray("Job Applications");
+export const studentApplications = idArray("Student Applications");
 
-export const lastLogin = dateField.messages({
-  "date.base": "Last login must be a valid date",
-});
+/* -----------------------------------------------------
+   8) STATUS & AUDIT
+----------------------------------------------------- */
 
-export const createdBy = objectId.messages({
-  "any.only": "Invalid createdBy user reference",
-});
+export const isActive = booleanField.default(true);
+export const isDeleted = booleanField.default(false);
+export const lastLogin = dateField.allow(null);
 
-export const updatedBy = objectId.messages({
-  "any.only": "Invalid updatedBy user reference",
-});
-
-export const deletedAt = dateField.allow(null).messages({
-  "date.base": "DeletedAt must be a valid date",
-});
+export const createdBy = objectId.allow(null);
+export const updatedBy = objectId.allow(null);
+export const deletedAt = dateField.allow(null);

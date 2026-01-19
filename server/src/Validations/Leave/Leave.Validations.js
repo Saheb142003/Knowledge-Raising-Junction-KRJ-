@@ -1,6 +1,8 @@
 import Joi from "joi";
 
-/* ------------------ COMMON HELPERS ------------------ */
+/* -----------------------------------------------------
+   1) COMMON HELPERS
+----------------------------------------------------- */
 
 export const objectId = Joi.string().hex().length(24).messages({
   "string.base": "ID must be a string",
@@ -8,20 +10,23 @@ export const objectId = Joi.string().hex().length(24).messages({
   "string.length": "ID must be a valid 24-character ObjectId",
 });
 
-export const dateField = Joi.date().messages({
-  "date.base": "Value must be a valid date",
+export const dateField = Joi.date().iso().messages({
+  "date.base": "Value must be a valid ISO date",
+  "date.format": "Date must be in ISO format",
 });
 
 export const booleanField = Joi.boolean().messages({
   "boolean.base": "Value must be true or false",
 });
 
-export const positiveNumber = Joi.number().min(1).messages({
+export const positiveNumber = Joi.number().min(0).messages({
   "number.base": "Value must be a number",
-  "number.min": "Value must be at least 1",
+  "number.min": "Value cannot be negative",
 });
 
-/* ------------------ APPLICANT CONTEXT ------------------ */
+/* -----------------------------------------------------
+   2) APPLICANT CONTEXT
+----------------------------------------------------- */
 
 export const applicantId = objectId.required().messages({
   "any.required": "Applicant ID is required",
@@ -35,27 +40,48 @@ export const applicantType = Joi.string()
     "any.required": "Applicant type is required",
   });
 
-/* ------------------ BRANCH CONTEXT ------------------ */
+export const applicantTypeRef = Joi.string()
+  .valid("Student", "Teacher", "Employee")
+  .required()
+  .messages({
+    "any.only": "Applicant Type Ref must be Student, Teacher, or Employee",
+  });
+
+/* -----------------------------------------------------
+   3) ORGANIZATION CONTEXT
+----------------------------------------------------- */
 
 export const branch = objectId.required().messages({
   "any.required": "Branch reference is required",
 });
 
-/* ------------------ LEAVE DATES ------------------ */
+export const batch = objectId.allow(null); // Optional (Student only)
+export const subject = objectId.allow(null); // Optional
+
+/* -----------------------------------------------------
+   4) LEAVE DETAILS
+----------------------------------------------------- */
 
 export const startDate = dateField.required().messages({
   "any.required": "Leave start date is required",
 });
 
-export const endDate = dateField.required().messages({
+export const endDate = dateField.min(Joi.ref('startDate')).required().messages({
   "any.required": "Leave end date is required",
+  "date.min": "End date cannot be before start date",
 });
 
-export const durationDays = positiveNumber.required().messages({
+export const durationDays = Joi.number().min(0.5).required().messages({
   "any.required": "Leave duration (in days) is required",
+  "number.min": "Duration must be at least half a day",
 });
 
-/* ------------------ REASON ------------------ */
+export const leaveType = Joi.string()
+  .valid("CASUAL", "SICK", "PAID", "UNPAID", "EXAM", "PERSONAL", "OTHER")
+  .default("OTHER")
+  .messages({
+    "any.only": "Invalid leave type selected",
+  });
 
 export const reason = Joi.string().trim().min(5).max(500).required().messages({
   "string.empty": "Leave reason is required",
@@ -63,28 +89,74 @@ export const reason = Joi.string().trim().min(5).max(500).required().messages({
   "string.max": "Leave reason must not exceed 500 characters",
 });
 
-/* ------------------ STATUS & APPROVAL ------------------ */
+export const attachment = Joi.string().uri().allow(null, "").messages({
+  "string.uri": "Attachment must be a valid URL",
+});
+
+/* -----------------------------------------------------
+   5) APPROVAL FLOW (MULTI-LEVEL)
+----------------------------------------------------- */
 
 export const status = Joi.string()
   .valid("PENDING", "APPROVED", "REJECTED", "CANCELLED")
+  .default("PENDING")
   .messages({
-    "any.only":
-      "Leave status must be PENDING, APPROVED, REJECTED, or CANCELLED",
+    "any.only": "Status must be PENDING, APPROVED, REJECTED, or CANCELLED",
   });
 
-export const approvedBy = objectId.allow(null).messages({
-  "any.only": "Invalid approvedBy admin reference",
+export const approvedBy = objectId.allow(null);
+export const approvalDate = dateField.allow(null);
+
+export const rejectionReason = Joi.string().trim().allow("").messages({
+  "string.base": "Rejection reason must be a string",
 });
 
-export const approvalDate = dateField.allow(null).messages({
-  "date.base": "Approval date must be a valid date",
+// Nested Approval Flow Schema
+const approvalFlowItem = Joi.object({
+  level: Joi.number().integer().min(1).required(),
+  approver: objectId.allow(null),
+  status: Joi.string().valid("PENDING", "APPROVED", "REJECTED").default("PENDING"),
+  updatedAt: dateField.default(Date.now),
+  remarks: Joi.string().allow(""),
 });
 
-/* ------------------ META ------------------ */
+export const approvalFlow = Joi.array().items(approvalFlowItem).messages({
+  "array.base": "Approval flow must be an array of objects",
+});
+
+/* -----------------------------------------------------
+   6) HR & PAYROLL BALANCE
+----------------------------------------------------- */
+
+export const leaveBalanceUsed = positiveNumber.default(0);
+export const affectsPayroll = booleanField.default(false);
+
+/* -----------------------------------------------------
+   7) NOTIFICATIONS
+----------------------------------------------------- */
+
+export const notified = booleanField.default(false);
+
+const notificationLogItem = Joi.object({
+  sentAt: dateField.default(Date.now),
+  method: Joi.string().valid("SMS", "EMAIL", "WHATSAPP", "APP").required(),
+  message: Joi.string().allow(""),
+});
+
+export const notificationLogs = Joi.array().items(notificationLogItem).messages({
+  "array.base": "Notification logs must be an array",
+});
+
+/* -----------------------------------------------------
+   8) META & AUDIT
+----------------------------------------------------- */
 
 export const remarks = Joi.string().trim().max(500).allow("").messages({
-  "string.base": "Remarks must be a string",
   "string.max": "Remarks must not exceed 500 characters",
 });
 
 export const isDeleted = booleanField;
+export const deletedAt = dateField.allow(null);
+export const deletedBy = objectId.allow(null);
+export const createdBy = objectId;
+export const updatedBy = objectId;

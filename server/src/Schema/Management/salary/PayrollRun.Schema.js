@@ -2,10 +2,9 @@ import mongoose from "mongoose";
 
 const payrollRunSchema = new mongoose.Schema(
   {
-    // ----------------------------------------------------
-    // 1) PAYROLL PERIOD INFO
-    // ----------------------------------------------------
-    month: {
+    
+    
+    month: { 
       type: Number, // 1–12
       required: true,
       index: true,

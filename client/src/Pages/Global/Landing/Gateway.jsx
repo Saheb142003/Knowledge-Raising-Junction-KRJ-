@@ -13,6 +13,7 @@ import KRJPlatform from '../../../Components/Global/Institute/KRJPlatform'
 const Gateway = () => {
   return (
     <div>
+      
       <Hero/>
       <CourseMarketplace/>
       <OfflineBatches/>
