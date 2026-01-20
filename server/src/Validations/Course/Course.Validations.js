@@ -234,3 +234,62 @@ export const createdBy = Joi.string()
   .messages({
     "string.length": "Invalid admin ID"
   });
+export const updatedBy = Joi.string()
+  .hex()
+  .length(24)
+  .optional()
+  .messages({
+    "string.length": "Invalid admin ID"
+  });
+export const totalEnrollments = Joi.number()
+  .integer()
+  .min(0)
+  .optional()
+  .messages({
+    "number.min": "Total enrollments cannot be negative"
+  });
+
+export const averageRating = Joi.number()
+  .min(0)
+  .max(5)
+  .optional()
+  .messages({
+    "number.min": "Rating cannot be less than 0",
+    "number.max": "Rating cannot be greater than 5"
+  });
+
+export const totalReviews = Joi.number()
+  .integer()
+  .min(0)
+  .optional()
+  .messages({
+    "number.min": "Total reviews cannot be negative"
+  });
+export const contentItem = Joi.object({
+  content: Joi.string()
+    .hex()
+    .length(24)
+    .required()
+    .messages({
+      "string.length": "Invalid CourseContent ID",
+      "any.required": "Course content reference is required"
+    }),
+
+  order: Joi.number()
+    .integer()
+    .min(0)
+    .optional()
+    .messages({
+      "number.base": "Content order must be a number",
+      "number.min": "Content order cannot be negative"
+    }),
+
+  isPreview: Joi.boolean().optional()
+});
+
+export const content = Joi.array()
+  .items(contentItem)
+  .optional()
+  .messages({
+    "array.base": "Content must be an array"
+  });

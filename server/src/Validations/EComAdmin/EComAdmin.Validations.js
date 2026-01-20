@@ -115,3 +115,8 @@ export const createdBy = Joi.string()
   .messages({
     "any.only": "Invalid createdBy value"
   });
+export const accessKeyHash = Joi.string()
+  .optional()
+  .messages({
+    "string.base": "Access key hash must be a string"
+  });

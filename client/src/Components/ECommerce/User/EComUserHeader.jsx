@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom'; 
-import Logo from './Logo'; // Adjust path as needed
+import Logo from '../../Global/Logo/Logo';
+ // Adjust path as needed
 
 // --- MOCK USER DATA ---
 const USER_INFO = {

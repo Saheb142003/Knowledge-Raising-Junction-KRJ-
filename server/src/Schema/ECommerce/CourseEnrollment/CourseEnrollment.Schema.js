@@ -5,7 +5,7 @@ const CourseEnrollmentSchema = new mongoose.Schema(
     /* =========================
        CORE REFERENCES
     ========================== */
-    user: {
+    user: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: "EComUser",
       required: true,

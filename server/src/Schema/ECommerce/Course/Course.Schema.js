@@ -109,6 +109,22 @@ const CourseSchema = new mongoose.Schema(
       type: Number
     },
 
+    content: [
+  {
+    content: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CourseContent",
+      required: true
+    },
+    order: Number,
+    isPreview: {
+      type: Boolean,
+      default: false
+    }
+  }
+]
+,
+
     /* =========================
        INSTRUCTOR INFO
     ========================== */
@@ -119,7 +135,7 @@ const CourseSchema = new mongoose.Schema(
       required: true
     },
     bio: {
-      type: String
+      type: String 
     },
     profileImage: {
       type: String

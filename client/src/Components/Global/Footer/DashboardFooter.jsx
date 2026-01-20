@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Logo from './Logo'; // Adjust import path
+import Logo from '../Logo/Logo';
+ 
 
 const DashboardFooter = () => {
   const currentYear = new Date().getFullYear();

@@ -94,3 +94,4 @@ CourseContentSchema.index({ course: 1, order: 1 });
 CourseContentSchema.index({ course: 1, type: 1 });
 
 export default mongoose.model("CourseContent", CourseContentSchema);
+ 
