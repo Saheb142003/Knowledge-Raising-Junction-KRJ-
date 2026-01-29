@@ -9,7 +9,7 @@ import { Student } from "../../../../Schema/Management/Student/Student.Schema.js
 import { Branch } from "../../../../Schema/Management/Branch/Branch.Schema.js";
 import { IDCard } from "../../../../Schema/Management/IDCard/IDCard.Schema.js";
 import { AcademicProfile } from "../../../../Schema/Management/AcademicDetails/AcademicProfile.Schema.js";
- 
+
 // Utils
 import ApiError from "../../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../../Utility/Response/SuccessResponse.Utility.js";
@@ -77,7 +77,7 @@ const registerStudentValidationSchema = Joi.object({
 
 export const registerStudent = asyncHandler(async (req, res) => {
   // 1. Strict Admin Check
-  await checkAdminPermission(req.user._id, "manage_students");
+  const admin = await checkAdminPermission(req.user._id, "manage_students");
 
   let session;
   try {
@@ -90,7 +90,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
       {
         abortEarly: false,
         stripUnknown: true,
-      }
+      },
     );
 
     if (error) {
@@ -100,7 +100,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
         error.details.map((d) => ({
           field: d.path.join("."),
           message: d.message,
-        }))
+        })),
       );
     }
 
@@ -138,6 +138,19 @@ export const registerStudent = asyncHandler(async (req, res) => {
       photo,
     } = value;
 
+    // 2.1 Branch Permission Check
+    if (admin.role !== "super_admin") {
+      const isManaged = admin.managedBranches.some(
+        (b) => b.toString() === branchId,
+      );
+      if (!isManaged) {
+        throw new ApiError(
+          403,
+          "Access denied. You do not manage the selected branch.",
+        );
+      }
+    }
+
     // 3. Check Existing User
     const existingUser = await User.findOne({
       $or: [{ username }, ...(email ? [{ email }] : [])],
@@ -145,7 +158,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
     if (existingUser) {
       throw new ApiError(
         409,
-        "User with this username or email already exists"
+        "User with this username or email already exists",
       );
     }
 
@@ -165,7 +178,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
           createdBy: req.user._id,
         },
       ],
-      { session }
+      { session },
     );
 
     const createdUser = newUsers[0];
@@ -195,7 +208,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
           onlineCourses: onlineCourses || [],
         },
       ],
-      { session }
+      { session },
     );
 
     const savedStudent = newStudents[0];
@@ -215,7 +228,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
           remarks: remarks || "",
         },
       ],
-      { session }
+      { session },
     );
 
     const savedProfile = newProfiles[0];
@@ -244,7 +257,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
           status: "ACTIVE",
         },
       ],
-      { session }
+      { session },
     );
 
     const savedIdCard = newIdCards[0];
@@ -261,7 +274,7 @@ export const registerStudent = asyncHandler(async (req, res) => {
         {
           $addToSet: { students: savedStudent._id },
         },
-        { session }
+        { session },
       );
     }
 

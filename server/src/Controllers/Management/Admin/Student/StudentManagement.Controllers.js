@@ -7,17 +7,38 @@ import successResponse from "../../../Utility/Response/SuccessResponse.Utility.j
 import { checkAdminPermission } from "../Admin.Utils.js";
 import { objectId } from "../../../Validations/User/User.Validations.js";
 import Joi from "joi";
- 
+
 const getAllStudents = asyncHandler(async (req, res) => {
   // 1. Check Permission
-  await checkAdminPermission(req.user._id, "manage_students");
+  const admin = await checkAdminPermission(req.user._id, "manage_students");
 
   const { page = 1, limit = 10, branchId, status, search } = req.query;
 
-  const query = {};
+  const query = { isDeleted: false }; // Default: don't show deleted
 
-  if (branchId) {
-    query.branch = branchId;
+  // Branch Filtering Logic
+  if (admin.role !== "super_admin") {
+    // If branchId is requested, check if it's in managedBranches
+    if (branchId) {
+      const isManaged = admin.managedBranches.some(
+        (b) => b.toString() === branchId,
+      );
+      if (!isManaged) {
+        throw new ApiError(
+          403,
+          "Access denied. You do not manage this branch.",
+        );
+      }
+      query.branch = branchId;
+    } else {
+      // If no branchId requested, return students from ALL managed branches
+      query.branch = { $in: admin.managedBranches };
+    }
+  } else {
+    // Super Admin can filter by any branchId or see all
+    if (branchId) {
+      query.branch = branchId;
+    }
   }
 
   if (status) {
@@ -73,7 +94,7 @@ const getAllStudents = asyncHandler(async (req, res) => {
 
 const getStudentProfile = asyncHandler(async (req, res) => {
   // 1. Check Permission
-  await checkAdminPermission(req.user._id, "manage_students");
+  const admin = await checkAdminPermission(req.user._id, "manage_students");
 
   const { studentId } = req.params;
   const { error } = objectId.required().validate(studentId);
@@ -94,6 +115,19 @@ const getStudentProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Student not found");
   }
 
+  // Branch Access Check
+  if (admin.role !== "super_admin") {
+    const isManaged = admin.managedBranches.some(
+      (branch) => branch.toString() === student.branch._id.toString(),
+    );
+    if (!isManaged) {
+      throw new ApiError(
+        403,
+        "Access denied. You do not manage this student's branch.",
+      );
+    }
+  }
+
   return successResponse(res, {
     message: "Student profile fetched successfully",
     data: student,
@@ -101,7 +135,7 @@ const getStudentProfile = asyncHandler(async (req, res) => {
 });
 
 const updateStudent = asyncHandler(async (req, res) => {
-  await checkAdminPermission(req.user._id, "manage_students");
+  const admin = await checkAdminPermission(req.user._id, "manage_students");
 
   const { studentId } = req.params;
   const { error: idError } = objectId.required().validate(studentId);
@@ -130,6 +164,19 @@ const updateStudent = asyncHandler(async (req, res) => {
 
   const student = await Student.findById(studentId);
   if (!student) throw new ApiError(404, "Student not found");
+
+  // Branch Access Check
+  if (admin.role !== "super_admin") {
+    const isManaged = admin.managedBranches.some(
+      (branch) => branch.toString() === student.branch.toString(),
+    );
+    if (!isManaged) {
+      throw new ApiError(
+        403,
+        "Access denied. You do not manage this student's branch.",
+      );
+    }
+  }
 
   // Update User
   if (value.fullName || value.email || value.phone) {
@@ -163,4 +210,47 @@ const updateStudent = asyncHandler(async (req, res) => {
   });
 });
 
-export { getAllStudents, getStudentProfile, updateStudent };
+const deleteStudent = asyncHandler(async (req, res) => {
+  const admin = await checkAdminPermission(req.user._id, "manage_students");
+
+  const { studentId } = req.params;
+  const { error } = objectId.required().validate(studentId);
+  if (error) throw new ApiError(400, "Invalid Student ID");
+
+  const student = await Student.findById(studentId);
+  if (!student) throw new ApiError(404, "Student not found");
+
+  // Branch Access Check
+  if (admin.role !== "super_admin") {
+    const isManaged = admin.managedBranches.some(
+      (branch) => branch.toString() === student.branch.toString(),
+    );
+    if (!isManaged) {
+      throw new ApiError(
+        403,
+        "Access denied. You do not manage this student's branch.",
+      );
+    }
+  }
+
+  // Soft Delete
+  student.isDeleted = true;
+  student.deletedAt = new Date();
+  student.deletedBy = admin._id;
+  student.status = "INACTIVE"; // Also mark as inactive
+
+  await student.save();
+
+  // Also soft delete the User account?
+  // Usually good practice to disable login
+  await User.findByIdAndUpdate(student.userId, {
+    isActive: false,
+    status: "DELETED",
+  });
+
+  return successResponse(res, {
+    message: "Student deleted successfully (Soft Delete)",
+  });
+});
+
+export { getAllStudents, getStudentProfile, updateStudent, deleteStudent };

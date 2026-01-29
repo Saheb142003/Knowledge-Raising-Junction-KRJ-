@@ -9,7 +9,7 @@ import Teacher from "../../../Schema/Management/Teacher/Teacher.Schema.js";
 import { Employee } from "../../../Schema/Management/Employee/Employee.Schema.js";
 import CounterSchema from "../../../Schema/Management/Counter/Counter.Schema.js";
 import { Branch } from "../../../Schema/Management/Branch/Branch.Schema.js";
- 
+
 // Utils
 import ApiError from "../../../Utility/Response/ErrorResponse.Utility.js";
 import successResponse from "../../../Utility/Response/SuccessResponse.Utility.js";
@@ -50,7 +50,7 @@ const registerTeacherValidationSchema = Joi.object({
 
 export const registerTeacher = asyncHandler(async (req, res) => {
   // 1. Strict Admin Check
-  await checkAdminPermission(req.user._id, "manage_teachers");
+  // Permission checked inside transaction block for branch verification
 
   let session;
   try {
@@ -73,6 +73,22 @@ export const registerTeacher = asyncHandler(async (req, res) => {
       ...empDetails
     } = value;
 
+    // 2.1 Branch Permission Check
+    const admin = await checkAdminPermission(req.user._id, "manage_teachers");
+    if (admin.role !== "super_admin") {
+      // Check if all requested branches are managed by this admin
+      const areAllBranchesManaged = branches.every((b) =>
+        admin.managedBranches.some((mb) => mb.toString() === b),
+      );
+
+      if (!areAllBranchesManaged) {
+        throw new ApiError(
+          403,
+          "Access denied. You do not manage one or more of the selected branches.",
+        );
+      }
+    }
+
     // Check Existing
     const existingUser = await User.findOne({
       $or: [{ email }, { username }],
@@ -93,7 +109,7 @@ export const registerTeacher = asyncHandler(async (req, res) => {
           createdBy: req.user._id,
         },
       ],
-      { session }
+      { session },
     );
     const createdUser = newUsers[0];
 
@@ -102,7 +118,7 @@ export const registerTeacher = asyncHandler(async (req, res) => {
     const counter = await CounterSchema.findOneAndUpdate(
       { key: `EMPLOYEE_${year}` },
       { $inc: { seq: 1 } },
-      { new: true, upsert: true, session }
+      { new: true, upsert: true, session },
     );
     const employeeCode = `KRJ-EMP-${year}-${String(counter.seq).padStart(3, "0")}`;
 
@@ -120,7 +136,7 @@ export const registerTeacher = asyncHandler(async (req, res) => {
           ...empDetails,
         },
       ],
-      { session }
+      { session },
     );
     const createdEmployee = newEmployees[0];
 
@@ -134,7 +150,7 @@ export const registerTeacher = asyncHandler(async (req, res) => {
           subjects: subjects || [],
         },
       ],
-      { session }
+      { session },
     );
     const createdTeacher = newTeachers[0];
 
@@ -142,7 +158,7 @@ export const registerTeacher = asyncHandler(async (req, res) => {
     await Branch.updateMany(
       { _id: { $in: branches } },
       { $addToSet: { employees: createdEmployee._id } },
-      { session }
+      { session },
     );
 
     await session.commitTransaction();

@@ -30,6 +30,12 @@ import {
 
 import { adminLogin, adminLogout } from "./Auth/AdminAuth.Controllers.js";
 
+import {
+  createBranch,
+  deleteBranch,
+  assignBranchAdmin,
+} from "./Branch/BranchManagement.Controllers.js";
+
 export {
   // Auth
   adminLogin,
@@ -56,4 +62,8 @@ export {
   getAllTeachers,
   getTeacherProfile,
   updateTeacher,
+  // Branch Management
+  createBranch,
+  deleteBranch,
+  assignBranchAdmin,
 };
